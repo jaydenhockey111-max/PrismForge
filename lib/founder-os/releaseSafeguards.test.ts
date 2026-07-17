@@ -8,6 +8,7 @@ describe("permanent project-creation release safeguards", () => {
   const client = readFileSync("components/founder-os/generate-form-persistence.tsx","utf8");
   const projectPage = readFileSync("app/(app)/projects/[id]/page.tsx","utf8");
   const proofActions = readFileSync("app/(app)/projects/proof-actions.ts","utf8");
+  const rlsMigration = readFileSync("supabase/migrations/20260717231349_rls_performance_and_rpc_hardening.sql","utf8");
 
   it("preserves every structured creation funnel event", () => {
     for (const event of ["project_creation_page_opened","project_creation_started","project_creation_request_sent","project_creation_request_received","project_generation_completed","project_database_save_completed","project_workspace_loaded","next_best_action_loaded","first_evidence_saved","project_creation_completed"]) expect(analytics).toContain(event);
@@ -15,6 +16,8 @@ describe("permanent project-creation release safeguards", () => {
   });
 
   it("keeps atomic project creation and registers the created project as focus", () => {
-    expect(createAction).toContain("create_founder_project_atomic"); expect(createAction).toContain("register_project_creation_lifecycle"); expect(createAction).toContain("requestId");
+    expect(createAction).toContain("create_founder_project_atomic");
+    expect(rlsMigration).toContain("perform private.register_project_creation_lifecycle");
+    expect(createAction).toContain("requestId");
   });
 });

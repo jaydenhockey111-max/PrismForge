@@ -725,6 +725,18 @@ export type Database = {
       search_founder_patterns: { Args:{p_category?:string|null;p_query?:string|null;p_offset?:number;p_limit?:number};Returns:Array<{id:string;insight_key:string;category:string;headline:string;explanation:string;evidence_tier:string;supporting_project_count:number;contradicting_project_count:number;limitations:string[];dimensions:Json;generated_at:string;data_through:string;total_count:number}> };
       update_founder_guidance_preferences: { Args:{p_guidance_mode:string;p_explanation_depth:string;p_quest_intensity:string;p_historical_personalization_enabled:boolean;p_show_historical_reminders:boolean;p_show_personalization_reasons:boolean;p_request_id:string};Returns:FounderGuidancePreferenceRow };
       reset_founder_personalization: { Args:{p_request_id:string};Returns:boolean };
+      create_founder_project_atomic: {
+        Args: {
+          p_request_id: string;
+          p_title: string;
+          p_business_type: string;
+          p_target_customer: string;
+          p_score: number;
+          p_report_json: Json;
+          p_input_json: Json;
+        };
+        Returns: string;
+      };
       set_current_project_focus: {
         Args: { p_project_id: string; p_request_id: string; p_source?: string };
         Returns: Array<{ project_id: string; previous_project_id: string | null; changed: boolean }>;

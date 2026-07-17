@@ -162,7 +162,6 @@ export async function generateFounderProject(formData: FormData) {
 
   const { projectId, error: projectError } = await createFounderProjectRecord({
     supabase,
-    userId: profile.id,
     requestId,
     input: sanitized,
     report,
@@ -407,13 +406,11 @@ async function findGenerationStateForRequest(userId: string, requestId: string):
 
 async function createFounderProjectRecord({
   supabase,
-  userId,
   requestId,
   input,
   report,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
-  userId: string;
   requestId: string;
   input: UserOpportunityInput;
   report: OpportunityReport;
@@ -430,49 +427,16 @@ async function createFounderProjectRecord({
     p_input_json: inputJson,
   };
 
-  const rpcBuilder = (supabase as any).rpc("create_founder_project_atomic", payload);
-  const rpc = typeof rpcBuilder.maybeSingle === "function" ? await rpcBuilder.maybeSingle() : await rpcBuilder;
+  const rpc = await supabase.rpc("create_founder_project_atomic", payload);
   if (!rpc.error && rpc.data) {
-    const projectId = typeof rpc.data === "string" ? rpc.data : typeof rpc.data?.project_id === "string" ? rpc.data.project_id : null;
-    if (projectId) {
-      await registerCreatedProjectLifecycle(supabase, projectId, requestId);
-      return { projectId, error: null };
-    }
+    const projectId = typeof rpc.data === "string" ? rpc.data : null;
+    if (projectId) return { projectId, error: null };
   }
 
-  const { data: project, error: projectError } = await supabase
-    .from("opportunity_projects")
-    .insert({
-      user_id: userId,
-      title: report.summary.title,
-      business_type: input.businessType,
-      target_customer: report.summary.targetCustomer,
-      score: report.score.overall,
-      report_json: outputJson,
-    })
-    .select("id")
-    .single();
-
-  if (projectError || !project) return { projectId: null, error: projectError ?? new Error("Project insert returned no row.") };
-
-  const { error: historyError } = await supabase.from("generation_history").insert({
-    user_id: userId,
-    input_json: inputJson,
-    output_json: outputJson,
-  });
-
-  if (historyError) {
-    await createAdminClient().from("opportunity_projects").delete().eq("id", project.id).eq("user_id", userId);
-    return { projectId: null, error: historyError };
-  }
-
-  await registerCreatedProjectLifecycle(supabase, project.id, requestId);
-  return { projectId: project.id, error: null };
-}
-
-async function registerCreatedProjectLifecycle(supabase: Awaited<ReturnType<typeof createClient>>, projectId: string, requestId: string) {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) return;
-  try { await supabase.rpc("register_project_creation_lifecycle", { p_project_id: projectId, p_request_id: requestId }); } catch { /* Creation remains successful if lifecycle migration is not live yet. */ }
+  return {
+    projectId: null,
+    error: rpc.error ?? new Error("Atomic project creation returned no project id."),
+  };
 }
 
 async function logGenerationStage({
