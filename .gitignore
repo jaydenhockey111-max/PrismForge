@@ -12,3 +12,6 @@ tsconfig.tsbuildinfo
 .vercel
 .env*
 .codex/
+
+# Sentry Config File
+.env.sentry-build-plugin
