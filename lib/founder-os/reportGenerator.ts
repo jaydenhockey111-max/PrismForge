@@ -6,8 +6,9 @@ import { assertValidGeneratedReport } from "@/lib/founder-os/reportQuality";
 export { createMockOpportunityReport } from "@/lib/founder-os/reportFallback";
 import { createMockOpportunityReport } from "@/lib/founder-os/reportFallback";
 import { buildPromptProjectContext, createProjectContext } from "@/lib/founder-os/projectContext";
+import type { AiExecutionContext } from "@/lib/ai/platform/types";
 
-export async function generateOpportunityReport(input: UserOpportunityInput, context?: { userId?: string | null; projectId?: string | null }): Promise<OpportunityReport> {
+export async function generateOpportunityReport(input: UserOpportunityInput, context?: AiExecutionContext): Promise<OpportunityReport> {
   const fallback = createMockOpportunityReport(input);
   const schemaGuide = createReportSchemaGuide(fallback);
   const compactContext = buildPromptProjectContext(createProjectContext({ report: fallback, status: "idea" }));

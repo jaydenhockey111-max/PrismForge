@@ -116,7 +116,7 @@ export function StartupTeamWorkspace({
     setAiMode(null);
     setAiFallbackReason(null);
     try {
-      const result = await generateStartupTeamOutput(projectId, "ceo", Boolean(directive));
+      const result = await generateStartupTeamOutput(projectId, "ceo", Boolean(directive), crypto.randomUUID());
       const output = result.output as unknown as CeoDirective;
       setDirective(output);
       writeStartupCache(projectId, "ceo", output);
@@ -145,7 +145,7 @@ export function StartupTeamWorkspace({
     setAiMode(null);
     setAiFallbackReason(null);
     try {
-      const result = await generateStartupTeamOutput(projectId, "designer", Boolean(wireframe));
+      const result = await generateStartupTeamOutput(projectId, "designer", Boolean(wireframe), crypto.randomUUID());
       const output = result.output as unknown as WireframeOutput;
       setWireframe(output);
       writeStartupCache(projectId, "designer", output);
@@ -173,7 +173,7 @@ export function StartupTeamWorkspace({
     setAiMode(null);
     setAiFallbackReason(null);
     try {
-      const result = await generateStartupTeamOutput(projectId, "marketer", Boolean(gtmPlan));
+      const result = await generateStartupTeamOutput(projectId, "marketer", Boolean(gtmPlan), crypto.randomUUID());
       const output = result.output as unknown as GtmPlan;
       setGtmPlan(output);
       writeStartupCache(projectId, "marketer", output);
@@ -201,7 +201,7 @@ export function StartupTeamWorkspace({
     setAiMode(null);
     setAiFallbackReason(null);
     try {
-      const result = await generateStartupTeamOutput(projectId, "engineer", Boolean(boilerplate));
+      const result = await generateStartupTeamOutput(projectId, "engineer", Boolean(boilerplate), crypto.randomUUID());
       const output = result.output as unknown as EngineerOutput;
       setBoilerplate(output);
       writeStartupCache(projectId, "engineer", output);
@@ -904,7 +904,7 @@ function usageBadge(mode: "openai" | "mock" | "cache" | null, fallbackReason?: s
   const reason = fallbackReason?.toLowerCase() ?? "";
   if (reason.includes("cooldown active")) return "Cooldown active";
   if (reason.includes("limit reached") || reason.includes("usage limit")) return "Limit reached";
-  if (mode === "openai") return "Generated with OpenAI";
+  if (mode === "openai") return "Generated with AI";
   if (mode === "cache") return "Cached result";
   return "Local fallback";
 }

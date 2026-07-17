@@ -575,6 +575,54 @@ export type RateLimitBucket = {
   updated_at: string;
 };
 
+export type AiRequest = {
+  id: string;
+  user_id: string;
+  project_id: string | null;
+  project_scope: string;
+  task_id: string;
+  request_id: string;
+  idempotency_key_hash: string;
+  input_hash: string;
+  provider: string;
+  model_route: string;
+  model_id: string;
+  prompt_version: string;
+  schema_version: string;
+  status: "reserved" | "completed" | "failed" | "cached" | "blocked" | "reconciliation_needed";
+  estimated_input_tokens: number;
+  estimated_output_tokens: number;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cached_input_tokens: number | null;
+  reserved_cost_usd: number;
+  actual_cost_usd: number | null;
+  result_json: Json | null;
+  provider_request_id: string | null;
+  attempt_count: number;
+  cache_hit: boolean;
+  failure_category: string | null;
+  failure_reason: string | null;
+  retryable: boolean;
+  synthetic: boolean;
+  source: string;
+  latency_ms: number | null;
+  cache_expires_at: string | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AiRuntimeControl = {
+  control_key: string;
+  enabled: boolean;
+  numeric_value: number | null;
+  note: string | null;
+  updated_by: string | null;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -638,11 +686,15 @@ export type Database = {
       app_events: { Row: AppEvent; Insert: Partial<AppEvent> & Pick<AppEvent, "event_name">; Update: Partial<AppEvent>; Relationships: [] };
       feature_usage_events: { Row: FeatureUsageEvent; Insert: Partial<FeatureUsageEvent> & Pick<FeatureUsageEvent, "feature" | "source">; Update: never; Relationships: [] };
       rate_limit_buckets: { Row: RateLimitBucket; Insert: Partial<RateLimitBucket> & Pick<RateLimitBucket, "key">; Update: Partial<RateLimitBucket>; Relationships: [] };
+      ai_requests: { Row: AiRequest; Insert: never; Update: never; Relationships: [] };
+      ai_runtime_controls: { Row: AiRuntimeControl; Insert: never; Update: never; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       check_rate_limit: { Args: { p_key: string; p_limit: number; p_window_seconds: number }; Returns: boolean };
+      reserve_ai_request: { Args: { p_request: Json }; Returns: Json };
+      finalize_ai_request: { Args: { p_request: Json }; Returns: Json };
       record_xp_event: {
         Args: {
           p_user_id: string;

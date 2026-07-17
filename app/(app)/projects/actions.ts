@@ -12,8 +12,6 @@ import { getFeatureCooldownSeconds, getFeatureUsagePolicy, planCanAccessFeature,
 import type { Json, ProjectOutputType } from "@/lib/database.types";
 import {
   generateExecutionOutputWithAI,
-  generateLocalExecutionOutput,
-  generateLocalStartupTeamOutput,
   generateStartupTeamOutputWithAI,
   type StartupTeamEmployee,
 } from "@/lib/founder-os/aiProjectTools";
@@ -26,7 +24,6 @@ import { awardFounderProgress, reconcileProjectProgress } from "@/lib/progress/s
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canSpendOpenAiCredit } from "@/lib/usage/aiUsageGuard";
 import { logFeatureUsage } from "@/lib/usage/featureUsage";
 import { getProjectPersonalization } from "@/lib/founder-intelligence/server";
 
@@ -281,7 +278,7 @@ export async function saveProjectOutput(projectId: string, outputType: ProjectOu
   return { saved: true, firstSave: !existing };
 }
 
-export async function generateExecutionOutput(projectId: string, outputType: ProjectOutputType, regenerate = false) {
+export async function generateExecutionOutput(projectId: string, outputType: ProjectOutputType, regenerate = false, requestId?: string) {
   const profile = await requireProfile();
   const parsedId = uuidSchema.safeParse(projectId);
   const parsedType = executableOutputTypeSchema.safeParse(outputType);
@@ -322,14 +319,13 @@ export async function generateExecutionOutput(projectId: string, outputType: Pro
   }
 
   const report = project.report_json as unknown as OpportunityReport;
-  const guard = await canSpendOpenAiCredit({ userId: profile.id, projectId: parsedId.data, feature, plan });
-  if (!guard.allowed) {
-    const output = generateLocalExecutionOutput(report, parsedType.data);
-    await logFeatureUsage({ userId: profile.id, projectId: parsedId.data, feature, source: "blocked", reason: guard.reason, success: false, errorCategory: guard.category });
-    return { output: output as unknown as Json, mode: "mock" as const, fallbackReason: guard.reason };
-  }
-
-  const result = await generateExecutionOutputWithAI(report, parsedType.data, { userId: profile.id, projectId: parsedId.data });
+  const result = await generateExecutionOutputWithAI(report, parsedType.data, {
+    actor: { userId: profile.id, plan },
+    projectId: parsedId.data,
+    requestId,
+    cacheBypass: regenerate,
+    source: "project_execution",
+  });
   await saveProjectOutput(parsedId.data, parsedType.data, result.value as unknown as Json);
 
   await logAuditEvent({
@@ -343,7 +339,7 @@ export async function generateExecutionOutput(projectId: string, outputType: Pro
   return { output: result.value as unknown as Json, mode: result.mode, fallbackReason: result.fallbackReason ?? null };
 }
 
-export async function generateStartupTeamOutput(projectId: string, employee: StartupTeamEmployee, regenerate = false) {
+export async function generateStartupTeamOutput(projectId: string, employee: StartupTeamEmployee, regenerate = false, requestId?: string) {
   const profile = await requireProfile();
   const parsedId = uuidSchema.safeParse(projectId);
   const parsedEmployee = startupEmployeeSchema.safeParse(employee);
@@ -393,13 +389,6 @@ export async function generateStartupTeamOutput(projectId: string, employee: Sta
 
   const report = project.report_json as unknown as OpportunityReport;
   const sprintTasks = Array.isArray(sprintOutput?.content_json) ? sprintOutput.content_json as unknown as SprintTaskOutput[] : undefined;
-  const guard = await canSpendOpenAiCredit({ userId: profile.id, projectId: parsedId.data, feature, plan });
-  if (!guard.allowed) {
-    const output = generateLocalStartupTeamOutput(parsedEmployee.data, report, project.status as ProjectStatus, sprintTasks);
-    await logFeatureUsage({ userId: profile.id, projectId: parsedId.data, feature, source: "blocked", reason: guard.reason, success: false, errorCategory: guard.category });
-    return { output: output as unknown as Json, mode: "mock" as const, fallbackReason: guard.reason };
-  }
-
   const founderIntelligence = await getProjectPersonalization({
     userId: profile.id,
     projectType: report.input.businessType,
@@ -411,7 +400,13 @@ export async function generateStartupTeamOutput(projectId: string, employee: Sta
     report,
     status: project.status as ProjectStatus,
     sprintTasks,
-    context: { userId: profile.id, projectId: parsedId.data },
+    context: {
+      actor: { userId: profile.id, plan },
+      projectId: parsedId.data,
+      requestId,
+      cacheBypass: regenerate,
+      source: "startup_team",
+    },
     founderIntelligence: founderIntelligence.compactAiContext,
   });
   try {
@@ -446,7 +441,6 @@ export async function logMarketPulseRefresh(projectId: string) {
   if (!project) return { ok: false, reason: "Project not found." };
   if (project.deleted_at || project.lifecycle_status !== "active") return { ok: false, reason: "Resume or restore this project before refreshing Market Pulse." };
   const feature: FeatureUsageKey = "market_pulse_refresh";
-  const policy = getFeatureUsagePolicy(feature);
   const plan = getEffectivePlan(profile);
   const cooldownSeconds = getFeatureCooldownSeconds(feature, plan);
   const pulseOk = await checkRateLimit({ key: `market_pulse_local:${profile.id}:${parsedId.data}`, limit: 1, windowSeconds: cooldownSeconds });

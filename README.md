@@ -98,6 +98,14 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 
+OPENAI_API_KEY=sk_...
+OPENAI_MODEL=gpt-4.1-mini
+AI_DISABLE_ALL=0
+AI_GLOBAL_SOFT_DAILY_USD=1.5
+AI_GLOBAL_HARD_DAILY_USD=2
+AI_GLOBAL_SOFT_MONTHLY_USD=20
+AI_GLOBAL_HARD_MONTHLY_USD=25
+
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PREMIUM_PRICE_ID=price_...
@@ -110,6 +118,8 @@ CRON_SECRET=use-a-long-random-value
 ```
 
 Never commit `.env.local`. Only variables beginning with `NEXT_PUBLIC_` are allowed in browser code. The Supabase service-role key, Stripe secret, webhook secret, Resend key, and cron secret must remain server-only.
+
+All production model calls use the centralized server-only AI platform, atomic ledger reservation, exact private caching, registered pricing, and deterministic fallback. Run `npm.cmd run diagnose:ai` before deployment and use [docs/AI_PLATFORM_RUNBOOK.md](docs/AI_PLATFORM_RUNBOOK.md) for kill switches, caps, reconciliation, and rollback.
 
 ## Supabase setup
 

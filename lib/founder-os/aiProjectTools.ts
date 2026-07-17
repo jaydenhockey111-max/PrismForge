@@ -19,6 +19,7 @@ import { cleanSentence, shortProjectName } from "@/lib/founder-os/helpers";
 import { cleanProjectTitle } from "@/lib/founder-os/titleQuality";
 import { buildPromptProjectContext, createProjectContext } from "@/lib/founder-os/projectContext";
 import { cleanGeneratedCopy, cleanGeneratedList, cleanGeneratedMarkdown, cleanHeading } from "@/lib/founder-os/copyQuality";
+import type { AiExecutionContext } from "@/lib/ai/platform/types";
 
 export type AiExecutionOutput =
   | ValidationSurveyOutput
@@ -49,7 +50,7 @@ export type GtmPlan = {
   riskWarning: string;
 };
 
-export async function generateExecutionOutputWithAI(report: OpportunityReport, outputType: ProjectOutputType, context?: { userId?: string | null; projectId?: string | null }) {
+export async function generateExecutionOutputWithAI(report: OpportunityReport, outputType: ProjectOutputType, context?: AiExecutionContext) {
   const fallback = executionFallback(report, outputType);
   return generateJsonWithAI({
     feature: executionFeature(outputType),
@@ -77,7 +78,7 @@ export async function generateStartupTeamOutputWithAI({
   report: OpportunityReport;
   status: ProjectStatus;
   sprintTasks?: SprintTaskOutput[];
-  context?: { userId?: string | null; projectId?: string | null };
+  context?: AiExecutionContext;
   founderIntelligence?: {
     guidanceMode: string;
     explanationDepth: string;

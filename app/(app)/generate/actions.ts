@@ -20,7 +20,6 @@ import { reconcileProjectProgress } from "@/lib/progress/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { canSpendOpenAiCredit } from "@/lib/usage/aiUsageGuard";
 import { logFeatureUsage } from "@/lib/usage/featureUsage";
 
 export async function generateFounderProject(formData: FormData) {
@@ -86,8 +85,7 @@ export async function generateFounderProject(formData: FormData) {
   if (!planCanAccessFeature(plan, "opportunity_report")) redirect(`/pricing?error=${encodeURIComponent(`Founder reports require ${reportPolicy.minPlan}.`)}`);
 
   const reusableProject = await findReusableProjectForInput(supabase, profile.id, sanitized);
-  const openAiAvailable = Boolean(process.env.OPENAI_API_KEY && process.env.DISABLE_OPENAI !== "1");
-  if (reusableProject && (reusableProject.generationMode === "openai" || !openAiAvailable)) {
+  if (reusableProject) {
     await logFeatureUsage({ userId: profile.id, projectId: reusableProject.id, feature: "opportunity_report", source: "cache", reason: "matching_saved_project_report", success: true });
     await logGenerationStage({ userId: profile.id, projectId: reusableProject.id, requestId, stage: "duplicate_input_reused", startedAt, source: "cache" });
     await logBetaEvent({ userId: profile.id, projectId: reusableProject.id, eventName: "duplicate_submission_blocked", source: "generate_action", metadata: { request_id: requestId, project_id: reusableProject.id, reason: "matching_saved_project_report" } });
@@ -252,18 +250,13 @@ async function createReportWithReliableFallback({
   plan: ReturnType<typeof getEffectivePlan>;
 }) {
   try {
-    const guard = await canSpendOpenAiCredit({ userId, projectId: "new-report", feature: "opportunity_report", plan });
-    if (!guard.allowed) {
-      await logFeatureUsage({ userId, feature: "opportunity_report", source: "blocked", reason: guard.reason, success: false, errorCategory: guard.category });
-      await logGenerationStage({ userId, requestId, stage: "openai_blocked_local_fallback_used", startedAt, source: "fallback", errorCategory: guard.category, metadata: { reason: guard.reason } });
-      await logBetaEvent({ userId, eventName: "local_fallback_used", source: "generate_action", metadata: { request_id: requestId, reason: guard.reason, error_category: guard.category } });
-      await logBetaEvent({ userId, eventName: "project_generation_fallback_used", source: "generate_action", metadata: { request_id: requestId, reason: guard.reason, error_category: guard.category } });
-      return { ...createMockOpportunityReport(input), fallbackReason: `OpenAI was not used: ${guard.reason}`, generationMode: "mock" as const };
-    }
-
     await logGenerationStage({ userId, requestId, stage: "openai_attempted", startedAt, source: "openai" });
     await logBetaEvent({ userId, eventName: "openai_generation_started", source: "generate_action", metadata: { request_id: requestId } });
-    const report = await generateOpportunityReport(input, { userId });
+    const report = await generateOpportunityReport(input, {
+      actor: { userId, plan },
+      requestId,
+      source: "generate_project",
+    });
     await logGenerationStage({
       userId,
       requestId,

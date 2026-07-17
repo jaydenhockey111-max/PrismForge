@@ -192,7 +192,7 @@ async function runTool<T>({
   logClientEvent("ai_employee_started", projectId, { employee: outputType, regenerate });
   setState({ pending: true, output: currentOutput ?? null, saved: Boolean(currentOutput), error: null, mode: null, fallbackReason: null, durationMs: null });
   try {
-    const result = await generateExecutionOutput(projectId, outputType, regenerate);
+    const result = await generateExecutionOutput(projectId, outputType, regenerate, crypto.randomUUID());
     const durationMs = Math.round(performance.now() - startedAt);
     setState({ pending: false, output: result.output as T, saved: true, error: null, mode: result.mode, fallbackReason: result.fallbackReason, durationMs });
     logClientEvent(result.mode === "cache" ? "ai_employee_cache_hit" : "ai_employee_completed", projectId, { employee: outputType, source: result.mode, duration_ms: durationMs });
@@ -329,7 +329,7 @@ function usageBadge(mode: "openai" | "mock" | "cache" | null, fallbackReason?: s
   const reason = fallbackReason?.toLowerCase() ?? "";
   if (reason.includes("cooldown active")) return "Cooldown active";
   if (reason.includes("limit reached") || reason.includes("usage limit")) return "Limit reached";
-  if (mode === "openai") return "Generated with OpenAI";
+  if (mode === "openai") return "Generated with AI";
   if (mode === "cache") return "Cached result";
   return "Local fallback";
 }

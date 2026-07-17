@@ -1,4 +1,4 @@
-import { Activity, ShieldCheck } from "lucide-react";
+import { Activity, Bot, ShieldCheck } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 
@@ -25,6 +25,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <ButtonLink href="/admin/monitoring" variant="secondary" className="gap-2">
             <Activity className="size-4" />
             Monitoring
+          </ButtonLink>
+          <ButtonLink href="/admin/ai" variant="secondary" className="gap-2">
+            <Bot className="size-4" />
+            AI operations
           </ButtonLink>
         </div>
       </section>
