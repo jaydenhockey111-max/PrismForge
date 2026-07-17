@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BarChart3, CheckCircle2, Flame, FolderKanban, History, Lightbulb, Rocket, Sparkles, Trophy, WandSparkles, Zap } from "lucide-react";
+import { BarChart3, CheckCircle2, Flame, FolderKanban, History, Lightbulb, Rocket, Trophy, WandSparkles, Zap } from "lucide-react";
 import { QuestPanel } from "@/components/founder-os/quest-system";
 import { ButtonLink } from "@/components/ui/button";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
@@ -131,30 +131,23 @@ export default async function ProgressPage({searchParams}:{searchParams:Promise<
         </div>
       )}
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-ink/10 bg-ink p-7 text-white shadow-glow sm:p-8">
-        <div className="absolute -right-16 -top-16 size-56 rounded-full bg-gold/20 blur-3xl" />
-        <div className="absolute -bottom-20 left-20 size-56 rounded-full bg-violet/25 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <section className="flex flex-col justify-between gap-7 border-b border-ink/10 pb-9 lg:flex-row lg:items-end">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-gold">
-              <Sparkles className="size-4" />
-              Founder journey
-            </p>
-            <h1 className="mt-3 max-w-3xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">One path. One next move. Real proof.</h1>
-            <p className="mt-3 max-w-2xl leading-7 text-white/70">
+            <p className="eyebrow">Founder journey</p>
+            <h1 className="page-title mt-4 max-w-3xl">One path. One next move. Real proof.</h1>
+            <p className="page-intro mt-4">
               Founder level reflects documented execution across projects. It never changes a project&apos;s evidence score or guarantees business quality.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <ButtonLink href={currentFocus.href} className="bg-gold text-ink hover:bg-white">Do next action</ButtonLink>
-            <ButtonLink href="/projects" variant="secondary" className="border-white/30 bg-white text-ink hover:bg-gold">Open projects</ButtonLink>
+            <ButtonLink href={currentFocus.href}>Do next action</ButtonLink>
+            <ButtonLink href="/projects" variant="secondary">Open projects</ButtonLink>
           </div>
-        </div>
       </section>
 
-      <section className="mt-8 rounded-[2rem] border border-moss/15 bg-gradient-to-br from-white via-lime/15 to-gold/15 p-6 shadow-card">
-        <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Next milestone</p>
-        <h2 className="mt-2 font-display text-3xl font-semibold text-ink">{currentFocus.title}</h2>
+      <section className="surface mt-8 border-l-2 border-l-violet p-6">
+        <p className="eyebrow">Next milestone</p>
+        <h2 className="mt-2 section-title">{currentFocus.title}</h2>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">{currentFocus.description}</p>
         <ButtonLink href={currentFocus.href} className="mt-5">Continue this project</ButtonLink>
       </section>

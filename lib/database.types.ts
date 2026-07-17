@@ -186,6 +186,22 @@ export type FounderPatternFeedback = { id:string; insight_id:string; user_id:str
 export type FounderGuidancePreferenceRow = { user_id:string; guidance_mode:"guided"|"balanced"|"autonomous"; explanation_depth:"brief"|"standard"|"detailed"; quest_intensity:"light"|"standard"|"ambitious"; historical_personalization_enabled:boolean; show_historical_reminders:boolean; show_personalization_reasons:boolean; preference_version:number; created_at:string; updated_at:string };
 export type FounderIntelligenceProfileRow = { user_id:string; profile_version:number; status:"dirty"|"calculating"|"ready"|"error"; profile_json:Json; learning_version:number; generated_at:string|null; data_through:string|null; dirty_at:string; calculation_started_at:string|null; calculation_request_id:string|null; last_error_category:string|null; created_at:string; updated_at:string };
 export type FounderGuidancePreferenceEvent = { id:string; user_id:string; event_type:"preferences_updated"|"personalization_reset"; request_id:string; previous_preferences:Json; next_preferences:Json; created_at:string };
+export type CoreValueFeedback = {
+  id: string;
+  user_id: string;
+  project_id: string;
+  rating: "yes" | "somewhat" | "no" | null;
+  decision_summary: string | null;
+  recommendation_more_useful: boolean | null;
+  contact_permission: boolean;
+  contact_preference: "account_email" | null;
+  milestone_category: string | null;
+  request_id: string;
+  submitted_at: string;
+  prompt_dismissed_at: string | null;
+  prompt_eligible_after: string | null;
+  permission_updated_at: string | null;
+};
 
 export type GenerationHistory = {
   id: string;
@@ -585,6 +601,7 @@ export type Database = {
       founder_guidance_preferences: { Row: FounderGuidancePreferenceRow; Insert: Partial<FounderGuidancePreferenceRow> & Pick<FounderGuidancePreferenceRow,"user_id">; Update: Partial<FounderGuidancePreferenceRow>; Relationships: [] };
       founder_intelligence_profiles: { Row: FounderIntelligenceProfileRow; Insert: Partial<FounderIntelligenceProfileRow> & Pick<FounderIntelligenceProfileRow,"user_id">; Update: Partial<FounderIntelligenceProfileRow>; Relationships: [] };
       founder_guidance_preference_events: { Row: FounderGuidancePreferenceEvent; Insert: Partial<FounderGuidancePreferenceEvent> & Pick<FounderGuidancePreferenceEvent,"user_id"|"event_type"|"request_id">; Update: never; Relationships: [] };
+      core_value_feedback: { Row: CoreValueFeedback; Insert: Partial<CoreValueFeedback> & Pick<CoreValueFeedback, "user_id" | "project_id" | "rating" | "request_id">; Update: Partial<CoreValueFeedback>; Relationships: [] };
       generation_history: { Row: GenerationHistory; Insert: Partial<GenerationHistory> & Pick<GenerationHistory, "user_id" | "input_json" | "output_json">; Update: never; Relationships: [] };
       subscriptions: { Row: Subscription; Insert: Partial<Subscription> & Pick<Subscription, "user_id">; Update: Partial<Subscription>; Relationships: [] };
       notification_logs: { Row: { id: string; user_id: string; opportunity_id: string; notification_type: "new_match" | "deadline_reminder"; sent_at: string }; Insert: { user_id: string; opportunity_id: string; notification_type: "new_match" | "deadline_reminder"; id?: string; sent_at?: string }; Update: never; Relationships: [] };

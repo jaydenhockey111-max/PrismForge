@@ -49,6 +49,7 @@ import { buildValueProofReport } from "@/lib/founder-os/valueProof";
 import { betaCohorts } from "@/lib/founder-os/coreLoop";
 import { summarizeProof } from "@/lib/proof-board";
 import { buildFounderQuestPlan } from "@/lib/progress/questPolicy";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getRelevantFounderReminders } from "@/lib/founder-learning/server";
 import { getProjectPersonalization } from "@/lib/founder-intelligence/server";
@@ -126,6 +127,39 @@ export default async function ProjectDetailPage({
   const savedOutputs = outputsByType((projectOutputs ?? []) as ProjectOutput[]);
   const proofExperiments = (validationExperiments ?? []) as ProjectValidationExperiment[];
   const proofSummary = summarizeProof(proofExperiments);
+  const admin = createAdminClient();
+  const [{ data: existingCoreFeedback, error: feedbackLookupError }, { data: recommendationEvent }] = await Promise.all([
+    supabase
+      .from("core_value_feedback")
+      .select("id,rating,prompt_eligible_after")
+      .eq("project_id", project.id)
+      .eq("user_id", profile.id)
+      .maybeSingle(),
+    admin
+      .from("app_events")
+      .select("id")
+      .eq("user_id", profile.id)
+      .eq("event_name", "core_loop_recommendation_updated")
+      .contains("metadata", { project_id: project.id })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const feedbackCooldownActive = Boolean(existingCoreFeedback?.rating)
+    || Boolean(existingCoreFeedback?.prompt_eligible_after && new Date(existingCoreFeedback.prompt_eligible_after).getTime() > Date.now());
+  const canAskCoreValueFeedback = !feedbackLookupError
+    && !feedbackCooldownActive
+    && !project.is_synthetic
+    && Boolean(recommendationEvent);
+  if (canAskCoreValueFeedback) {
+    await logBetaEvent({
+      userId: profile.id,
+      projectId: project.id,
+      eventName: "core_loop_feedback_prompt_viewed",
+      source: "project_detail",
+      metadata: { trigger: "evidence_changed_recommendation" },
+      throttleSeconds: 24 * 60 * 60,
+    });
+  }
   const status = project.status as ProjectStatus;
   const lifecycleStatus = project.lifecycle_status as ProjectLifecycleStatus;
   const businessType = project.business_type as BusinessType;
@@ -232,31 +266,31 @@ export default async function ProjectDetailPage({
       <FormMessage message={query.message} type="success" />
       <FormMessage message={query.error} />
 
-      <div className="mt-5">
+      <div>
         <Link href="/projects" className="inline-flex items-center gap-2 text-sm font-bold text-ink/55 hover:text-ink">
           <ArrowLeft className="size-4" />
           Back to projects
         </Link>
       </div>
 
-      <section className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6" data-beta-project-title={displayTitle} data-beta-project-status={status}>
+      <section className="surface mt-6 p-6 sm:p-8" data-beta-project-title={displayTitle} data-beta-project-status={status}>
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <ProjectStatusBadge status={status} />
               <LifecycleBadge status={lifecycleStatus} deletedAt={project.deleted_at} currentFocus={focus?.project_id === project.id} />
-              <span className="rounded-full bg-cream px-3 py-1 text-xs font-black text-ink/60">{BUSINESS_TYPE_LABELS[businessType]}</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-cream px-3 py-1 text-xs font-black text-ink/60">
+              <span className="rounded-full bg-cream px-3 py-1 text-xs font-bold text-ink/55">{BUSINESS_TYPE_LABELS[businessType]}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-cream px-3 py-1 text-xs font-bold text-ink/55">
                 <CalendarDays className="size-3.5" />
                 Created {format(new Date(project.created_at), "MMM d, yyyy")}
               </span>
             </div>
-            <h1 className="mt-4 break-words font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{displayTitle}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">{report.summary.oneSentenceIdea}</p>
-            <Link href={`/projects/${project.id}/timeline`} className="mt-4 inline-flex items-center gap-2 text-sm font-black text-violet transition hover:text-ink"><History className="size-4" />View project timeline</Link>
+            <h1 className="mt-5 break-words font-display text-4xl font-semibold tracking-[-.04em] text-ink sm:text-5xl">{displayTitle}</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-ink/60">{report.summary.oneSentenceIdea}</p>
+            <Link href={`/projects/${project.id}/timeline`} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-violet transition hover:text-ink"><History className="size-4" />View project timeline</Link>
           </div>
-          <div className="rounded-[1.5rem] border border-moss/15 bg-lime/20 p-4 lg:w-64">
-            <p className="text-xs font-black uppercase tracking-[.14em] text-moss">Current stage</p>
+          <div className="rounded-xl border border-ink/10 bg-cream/65 p-4 lg:w-64">
+            <p className="text-xs font-bold uppercase tracking-[.14em] text-ink/45">Current stage</p>
             <p className="mt-2 font-display text-2xl font-semibold capitalize text-ink">{status}</p>
             <p className="mt-1 text-xs font-semibold leading-5 text-ink/55">{proofSummary.experiment_count ? `${proofSummary.experiment_count} evidence record${proofSummary.experiment_count === 1 ? "" : "s"}` : "No evidence recorded yet"}</p>
           </div>
@@ -285,22 +319,22 @@ export default async function ProjectDetailPage({
           <TodayFocusCard projectId={project.id} nextAction={nextAction} status={status} proofSummary={proofSummary} historicalReminders={historicalReminders} intelligenceProfile={personalization.profile} personalizationContext={personalization.context} />
           {questPlan.dailyQuest && <DailyQuestCard quest={questPlan.dailyQuest} />}
           <details className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6"><summary className="cursor-pointer font-black text-violet">More planning tools</summary><div className="mt-5 border-t border-ink/10 pt-5"><WeeklyQuestSummary quests={questPlan.weeklyQuests} weeklyOutcome={questPlan.weeklyOutcome} /><FounderLoopCard /><Link href={`/projects/${project.id}?section=ai-team`} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet">Open a specialist</Link></div></details>
-          {proofSummary.experiment_count > 0 && <CoreValueFeedback projectId={project.id} />}
+          {canAskCoreValueFeedback && <CoreValueFeedback projectId={project.id} />}
         </>
       )}
 
       {activeSection === "project" && (
         <>
-          <section className="mt-6 rounded-[2rem] border border-violet/15 bg-gradient-to-br from-white via-violet/5 to-lime/20 p-6 shadow-card">
+          <section className="surface mt-6 p-6">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
-            <p className="text-xs font-black uppercase tracking-[.16em] text-violet">Project</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">What am I building?</h2>
+            <p className="eyebrow">Project</p>
+            <h2 className="mt-2 section-title">What am I building?</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">
               This is the home for the project definition, assumptions, status, notes, export controls, and strategy report. Use Today when you want the next action.
             </p>
           </div>
-          <Link href={`/projects/${project.id}?section=today`} className="inline-flex min-h-11 items-center justify-center rounded-full bg-gold px-5 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss focus-visible:ring-offset-2">
+          <Link href={`/projects/${project.id}?section=today`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-violet/80 bg-violet px-5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-[#5649d7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2">
             Go to Today
           </Link>
         </div>

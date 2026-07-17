@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, ClipboardCheck, Compass, Lightbulb } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ClipboardCheck, Compass, Lightbulb } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
 import { APP_NAME } from "@/lib/brand";
@@ -9,46 +9,119 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const profile = await getCurrentProfile();
   if (profile) {
-    await logBetaEvent({ userId: profile.id, eventName: "landing_auth_state_rendered", source: "landing_page", metadata: { authenticated: true, profile_exists: true, target_route: "/start" }, throttleSeconds: 15 * 60 });
+    await logBetaEvent({
+      userId: profile.id,
+      eventName: "landing_auth_state_rendered",
+      source: "landing_page",
+      metadata: { authenticated: true, profile_exists: true, target_route: "/start" },
+      throttleSeconds: 15 * 60,
+    });
   }
 
   return (
     <main>
-      <section className="paper-grid overflow-hidden border-b border-ink/10">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:px-8 lg:py-28">
+      <section className="paper-grid border-b border-ink/10">
+        <div className="mx-auto grid max-w-7xl gap-16 px-5 py-20 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:px-8 lg:py-32">
           <div className="max-w-3xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-violet/20 bg-white px-4 py-2 text-sm font-black text-violet"><Compass className="size-4" />A practical founder workspace</p>
-            <h1 className="mt-6 font-display text-5xl font-semibold leading-[.98] tracking-[-.04em] text-ink sm:text-7xl">Know exactly what to test next.</h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-ink/65">{APP_NAME} helps first-time founders turn a vague idea into one clear assumption, one realistic test, and one useful next action. Your evidence and decisions stay organized as the project changes.</p>
-            <div className="mt-9 flex flex-wrap gap-3"><ButtonLink href="/start" className="gap-2 bg-violet hover:bg-ink">Create your first project <ArrowRight className="size-4" /></ButtonLink><ButtonLink href="#how-it-works" variant="secondary">See the 20-minute loop</ButtonLink></div>
-            <p className="mt-4 text-sm font-semibold text-ink/50">Free to start · No credit card required · No automatic AI calls</p>
+            <p className="eyebrow inline-flex items-center gap-2"><Compass className="size-4" />A practical founder workspace</p>
+            <h1 className="mt-6 font-display text-5xl font-semibold leading-[.96] tracking-[-.055em] text-ink sm:text-7xl">
+              Stop circling the idea. Test what matters.
+            </h1>
+            <p className="mt-8 max-w-2xl text-lg leading-8 text-ink/62">
+              {APP_NAME} turns a vague business idea into one clear uncertainty, one realistic test, and one useful next action—then keeps the evidence organized as you learn.
+            </p>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <ButtonLink href="/start" className="gap-2">Start your first project <ArrowRight className="size-4" /></ButtonLink>
+              <ButtonLink href="#how-it-works" variant="secondary">See the workflow</ButtonLink>
+            </div>
+            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-ink/50">
+              {["Free to start", "No credit card", "No automatic AI calls"].map((item) => (
+                <span key={item} className="inline-flex items-center gap-2"><Check className="size-4 text-violet" />{item}</span>
+              ))}
+            </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-lg">
-            <div className="absolute -right-8 -top-8 size-40 rounded-full bg-violet/20 blur-3xl" />
-            <div className="absolute -bottom-8 -left-8 size-44 rounded-full bg-gold/25 blur-3xl" />
-            <div className="relative rounded-[2rem] border border-ink/10 bg-white p-6 shadow-glow sm:p-7">
-              <p className="text-xs font-black uppercase tracking-[.16em] text-violet">Example founder loop</p>
-              <div className="mt-5 rounded-2xl bg-cream/60 p-4"><p className="text-xs font-black uppercase tracking-[.12em] text-ink/45">Biggest question</p><p className="mt-2 font-display text-xl font-semibold text-ink">Will students use a planning workflow before a difficult exam?</p></div>
-              <div className="mt-3 rounded-2xl border border-moss/15 bg-lime/20 p-4"><p className="text-xs font-black uppercase tracking-[.12em] text-moss">Next action</p><p className="mt-2 text-sm font-bold leading-6 text-ink/75">Talk to three students and record how they decide what to study.</p></div>
-              <div className="mt-5 flex items-center gap-3 text-sm font-black text-ink"><CheckCircle2 className="size-5 text-moss" />Evidence changes the recommendation.</div>
+          <div className="relative mx-auto w-full max-w-xl">
+            <div className="rounded-[1.75rem] border border-ink/10 bg-white p-4 shadow-glow sm:p-5">
+              <div className="flex items-center justify-between border-b border-ink/10 px-2 pb-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[.16em] text-ink/40">Current project</p>
+                  <p className="mt-1 font-semibold text-ink">Student study planner</p>
+                </div>
+                <span className="rounded-full bg-violet/10 px-3 py-1 text-xs font-bold text-violet">Testing</span>
+              </div>
+              <div className="grid gap-3 pt-4">
+                <div className="rounded-2xl bg-cream/75 p-5">
+                  <p className="text-xs font-bold uppercase tracking-[.15em] text-ink/40">Biggest uncertainty</p>
+                  <p className="mt-3 font-display text-xl font-semibold leading-7 tracking-[-.02em] text-ink">
+                    Will students use a planning workflow before a difficult exam?
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-violet/15 bg-violet/[.055] p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-[.15em] text-violet">Next action</p>
+                    <span className="text-xs font-semibold text-ink/45">20 min</span>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold leading-6 text-ink/75">
+                    Talk to three students and record how they decide what to study.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 px-2 py-2 text-sm font-semibold text-ink/58">
+                  <CheckCircle2 className="size-5 text-moss" />
+                  Evidence—not activity—changes the recommendation.
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
-        <div className="max-w-2xl"><p className="text-sm font-black uppercase tracking-[.18em] text-violet">The core loop</p><h2 className="mt-3 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">From rough idea to a useful test in one sitting.</h2></div>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {[
-            [Lightbulb, "Clarify the uncertainty", "PrismForge structures your idea and identifies the biggest question that is still unproven."],
-            [ClipboardCheck, "Prepare one realistic test", "Get a specific action, completion condition, evidence requirement, and the support needed to begin."],
-            [CheckCircle2, "Record what actually happened", "Save evidence and see why the next recommendation changed. PrismForge never labels an idea validated from a plan alone."],
-          ].map(([Icon, title, copy]) => { const I = Icon as typeof Lightbulb; return <article key={String(title)} className="rounded-[2rem] border border-ink/10 bg-white p-7 shadow-card"><I className="size-8 text-violet" /><h3 className="mt-6 text-xl font-black text-ink">{String(title)}</h3><p className="mt-3 leading-7 text-ink/60">{String(copy)}</p></article>; })}
+      <section id="how-it-works" className="mx-auto max-w-7xl px-5 py-24 lg:px-8 lg:py-32">
+        <div className="grid gap-12 lg:grid-cols-[.72fr_1.28fr] lg:gap-20">
+          <div className="max-w-xl">
+            <p className="eyebrow">The core loop</p>
+            <h2 className="mt-4 font-display text-4xl font-semibold leading-[1.05] tracking-[-.04em] text-ink sm:text-5xl">
+              From rough idea to useful evidence in one sitting.
+            </h2>
+            <p className="mt-6 leading-7 text-ink/58">
+              Each step removes uncertainty. Nothing is labeled validated just because a plan exists.
+            </p>
+          </div>
+          <div className="divide-y divide-ink/10 border-y border-ink/10">
+            {[
+              [Lightbulb, "01", "Clarify the uncertainty", "Structure the idea and identify the biggest question that is still unproven."],
+              [ClipboardCheck, "02", "Prepare one realistic test", "Get a specific action, completion condition, and evidence requirement."],
+              [CheckCircle2, "03", "Record what happened", "Save real-world signals and see exactly why the next recommendation changed."],
+            ].map(([Icon, number, title, copy]) => {
+              const I = Icon as typeof Lightbulb;
+              return (
+                <article key={String(number)} className="grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:py-8">
+                  <span className="text-sm font-bold text-violet">{String(number)}</span>
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <I className="size-5 text-ink/45" />
+                      <h3 className="text-lg font-bold tracking-[-.015em] text-ink">{String(title)}</h3>
+                    </div>
+                    <p className="mt-3 max-w-xl leading-7 text-ink/58">{String(copy)}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="bg-ink text-white"><div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-6 px-5 py-14 sm:flex-row sm:items-center lg:px-8"><div><p className="text-xs font-black uppercase tracking-[.16em] text-lime">Start small</p><h2 className="mt-2 font-display text-3xl font-semibold">Test the riskiest assumption before you overbuild.</h2></div><ButtonLink href="/start" className="shrink-0 bg-gold text-ink hover:bg-white">Start creating</ButtonLink></div></section>
+      <section className="border-y border-ink/10 bg-white">
+        <div className="mx-auto flex max-w-5xl flex-col items-start justify-between gap-8 px-5 py-16 sm:flex-row sm:items-center lg:px-8 lg:py-20">
+          <div>
+            <p className="eyebrow">Start small</p>
+            <h2 className="mt-3 max-w-2xl font-display text-3xl font-semibold tracking-[-.03em] text-ink sm:text-4xl">
+              Test the riskiest assumption before you overbuild.
+            </h2>
+          </div>
+          <ButtonLink href="/start" className="shrink-0 gap-2">Start a project <ArrowRight className="size-4" /></ButtonLink>
+        </div>
+      </section>
     </main>
   );
 }

@@ -19,7 +19,7 @@ export default async function ProjectTimelinePage({ params, searchParams }: { pa
     <FormMessage message={timeline.error ?? undefined} />
     <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-2 text-sm font-black text-ink/55 hover:text-ink"><ArrowLeft className="size-4" />Back to project</Link>
     <div className="mt-7 flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-violet"><History className="size-4" />Project history</div>
-    <h1 className="mt-2 break-words font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">{project.title}</h1>
+    <h1 className="page-title mt-3 break-words">{project.title}</h1>
     <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60 sm:text-base">Only meaningful decisions, evidence, lifecycle changes, milestones, launches, and lessons for this project.</p>
     <FounderTimeline {...timeline} projectId={project.id} referenceNow={new Date().toISOString()} />
   </div>;

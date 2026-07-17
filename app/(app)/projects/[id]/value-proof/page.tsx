@@ -73,7 +73,7 @@ export default async function ProjectValueProofPage({ params }: { params: Promis
 
       <section className="mt-6 rounded-[2rem] border border-ink/10 bg-ink p-7 text-white shadow-glow">
         <p className="text-sm font-black uppercase tracking-[.16em] text-gold">Value Proof</p>
-        <h1 className="mt-3 max-w-4xl font-display text-4xl font-semibold tracking-tight sm:text-5xl">{displayTitle}</h1>
+        <h1 className="page-title mt-3 max-w-4xl">{displayTitle}</h1>
         <p className="mt-3 max-w-3xl leading-7 text-white/70">
           A factual record of what PrismForge organized, what you did, what evidence exists, and what remains unproven.
         </p>

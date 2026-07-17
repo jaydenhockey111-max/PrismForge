@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Bell, FolderKanban, Gamepad2, HelpCircle, History, LayoutDashboard, Rocket, ShieldCheck, Settings, Trophy } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
+import { AppNavigation } from "@/components/app-navigation";
 import { BetaFeedbackButton } from "@/components/beta-feedback-button";
 import { ProjectSwitcher } from "@/components/founder-os/project-switcher";
 import { Logo } from "@/components/logo";
@@ -25,40 +26,53 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (focusedProject) switcherProjects.unshift(focusedProject);
   }
   const entitlements = getEntitlements(profile, xp);
-  const links = [
-    ["/dashboard", "Home", LayoutDashboard],
-    ["/generate", "Create", Rocket],
-    ["/projects", "Projects", FolderKanban],
-    ["/timeline", "Timeline", History],
-    ["/progress", "Progress", Gamepad2],
-    ["/help", "Help", HelpCircle],
-    ["/settings", "Settings", Settings],
-    ...(canAccessAdmin(profile) ? [["/admin", "Admin", ShieldCheck] as const] : []),
-  ] as const;
+  const hasAdminAccess = canAccessAdmin(profile);
   const planLabel = entitlements.reason === "lifetime_founder" ? "Lifetime Founder" : entitlements.reason === "beta_founder" ? "Founder beta" : entitlements.reason === "trial" ? "Trial" : entitlements.effectivePlan;
 
   return (
-    <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[280px_1fr]">
-      <aside className="border-b border-ink/10 bg-white/85 backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
-        <div className="flex min-h-20 items-center justify-between px-5 lg:px-7"><Logo /><span className="rounded-full bg-gold px-3 py-1 text-xs font-bold uppercase text-ink">{planLabel}</span></div>
-        <div className="border-t border-ink/10 px-4 py-3 text-xs font-semibold leading-5 text-ink/55 lg:border-0">
-          Core loop: create a project, contact real people, log proof, then repeat.
+    <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
+      <aside className="border-b border-ink/10 bg-white/90 backdrop-blur-xl lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
+        <div className="flex min-h-20 items-center justify-between px-5 lg:px-6">
+          <Logo />
+          <span className="rounded-full border border-ink/10 bg-cream px-2.5 py-1 text-[.625rem] font-bold uppercase tracking-[.1em] text-ink/55">{planLabel}</span>
         </div>
-        <div className="px-4 pb-2"><ProjectSwitcher projects={switcherProjects} currentProjectId={focus?.project_id ?? null} /></div>
-        <nav className="flex gap-1 overflow-x-auto border-t border-ink/10 px-3 py-3 lg:grid lg:border-0 lg:px-4" aria-label="Main navigation">
-          {links.map(([href, label, Icon]) => <Link key={href} href={href} className="flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-ink/65 hover:bg-cream hover:text-ink"><Icon className="size-4" />{label}</Link>)}
-        </nav>
-        <div className="hidden px-4 lg:absolute lg:bottom-5 lg:block lg:w-[280px]">
-          <div className="mb-3"><BetaFeedbackButton /></div>
-          <div className="mb-4 rounded-2xl bg-gradient-to-br from-cream to-sky/30 p-4"><p className="truncate text-sm font-bold">{profile.name ?? "Founder"}</p><p className="mt-1 truncate text-xs font-medium text-ink/65">{profile.email}</p><Link href="/beta-guide" className="mt-3 inline-flex text-xs font-black text-violet hover:text-ink">How to test PrismForge</Link></div>
-          <form action={logout}><button className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold text-ink/75 hover:bg-cream">Sign out</button></form>
-          <div className="mt-2 flex gap-4 px-4 text-xs font-semibold text-ink/60"><Link href="/privacy" className="hover:text-ink">Privacy</Link><Link href="/terms" className="hover:text-ink">Terms</Link></div>
+        <div className="hidden px-4 lg:block">
+          <ProjectSwitcher projects={switcherProjects} currentProjectId={focus?.project_id ?? null} />
+        </div>
+        <div className="hidden flex-1 overflow-y-auto px-4 py-7 lg:block">
+          <AppNavigation admin={hasAdminAccess} />
+        </div>
+        <div className="hidden border-t border-ink/10 p-4 lg:block">
+          <Link href="/account" className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-ink/[.045]">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-ink/[.06] text-ink/60"><UserRound className="size-4" /></span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-ink">{profile.name ?? "Founder"}</span>
+              <span className="block truncate text-xs text-ink/45">{profile.email}</span>
+            </span>
+          </Link>
+          <div className="mt-2 flex items-center justify-between px-3">
+            <Link href="/beta-guide" className="text-xs font-semibold text-ink/50 hover:text-violet">Beta guide</Link>
+            <form action={logout}>
+              <button aria-label="Sign out" className="grid size-8 place-items-center rounded-lg text-ink/45 hover:bg-ink/[.05] hover:text-ink"><LogOut className="size-4" /></button>
+            </form>
+          </div>
+          <div className="mt-3 flex gap-3 border-t border-ink/10 px-3 pt-3 text-[.6875rem] text-ink/40">
+            <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+            <Link href="/terms" className="hover:text-ink">Terms</Link>
+          </div>
+        </div>
+        <div className="border-t border-ink/10 px-5 py-3 lg:hidden">
+          <ProjectSwitcher projects={switcherProjects} currentProjectId={focus?.project_id ?? null} />
+          <div className="mt-3"><AppNavigation admin={hasAdminAccess} mobile /></div>
         </div>
       </aside>
-      <div>
-        <header className="hidden min-h-20 items-center justify-end border-b border-ink/10 bg-white/70 px-8 backdrop-blur lg:flex"><div className="flex items-center gap-3 text-sm font-medium text-ink/70"><Trophy className="size-4 text-gold" /><span>Stop guessing. Prove one idea with one real action.</span><Bell className="size-4 text-violet" /></div></header>
+      <div className="min-w-0">
+        <header className="hidden min-h-16 items-center justify-between border-b border-ink/10 bg-white/55 px-8 backdrop-blur-xl lg:flex">
+          <p className="text-sm font-medium text-ink/45">Make one decision. Test it in the real world.</p>
+          <BetaFeedbackButton />
+        </header>
         <div className="border-b border-ink/10 bg-white/55 px-5 py-3 backdrop-blur lg:hidden"><BetaFeedbackButton /></div>
-        <main className="mx-auto max-w-7xl px-5 py-8 lg:px-10 lg:py-12">{children}</main>
+        <main className="mx-auto max-w-[90rem] px-5 py-9 lg:px-10 lg:py-14 xl:px-14">{children}</main>
       </div>
     </div>
   );

@@ -33,7 +33,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <SlidersHorizontal className="size-4" />
             Settings
           </div>
-          <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink">One clean control center.</h1>
+          <h1 className="page-title mt-3">One clean control center.</h1>
           <p className="mt-3 max-w-2xl text-ink/60">
             Profile, email preferences, data export, account deletion, and support now live here so testers do not have to hunt through duplicate pages.
           </p>

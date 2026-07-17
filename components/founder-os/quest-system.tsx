@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, CheckCircle2, ClipboardCheck, Lightbulb, RefreshCcw, ShieldCheck, Target, X } from "lucide-react";
 import type { FounderQuest } from "@/lib/progress/questPolicy";
@@ -96,6 +96,29 @@ export function QuestCard({ quest, variant = "compact" }: QuestCardProps) {
   const [awardMessage, setAwardMessage] = useState("");
   const mountedRef = useRef(true);
 
+  const logQuestEvent = useCallback(async (eventName: string) => {
+    try {
+      await fetch("/api/beta-events", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          eventName,
+          metadata: {
+            quest_id: quest.id,
+            project_id: quest.projectId,
+            cadence: quest.cadence,
+            category: quest.category,
+            verification_method: quest.verificationMethod,
+            source: quest.source,
+            project_status: quest.metadata.projectStatus,
+          },
+        }),
+      });
+    } catch {
+      // Analytics must never block quest actions.
+    }
+  }, [quest.cadence, quest.category, quest.id, quest.metadata.projectStatus, quest.projectId, quest.source, quest.verificationMethod]);
+
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
@@ -111,7 +134,7 @@ export function QuestCard({ quest, variant = "compact" }: QuestCardProps) {
     } catch {
       setStored(null);
     }
-  }, [quest.id, replacementKey, storageKey]);
+  }, [logQuestEvent, quest.id, replacementKey, storageKey]);
 
   const completed = quest.done || stored?.status === "completed";
   const manuallyDone = stored?.status === "completed" && !quest.done;
@@ -179,29 +202,6 @@ export function QuestCard({ quest, variant = "compact" }: QuestCardProps) {
       completedAt: new Date().toISOString(),
       alternativeTitle: alternative.title,
     });
-  }
-
-  async function logQuestEvent(eventName: string) {
-    try {
-      await fetch("/api/beta-events", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          eventName,
-          metadata: {
-            quest_id: quest.id,
-            project_id: quest.projectId,
-            cadence: quest.cadence,
-            category: quest.category,
-            verification_method: quest.verificationMethod,
-            source: quest.source,
-            project_status: quest.metadata.projectStatus,
-          },
-        }),
-      });
-    } catch {
-      // Analytics must never block quest actions.
-    }
   }
 
   return (

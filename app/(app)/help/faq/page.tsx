@@ -73,7 +73,7 @@ export default function FaqPage() {
           <HelpCircle className="size-4" />
           FAQ
         </p>
-        <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Quick answers for beta testers.</h1>
+        <h1 className="page-title mt-3">Quick answers for beta testers.</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
           If you are not sure where to click, remember the loop: create a project, get one next action, contact real people, log proof, and repeat.
         </p>

@@ -1,6 +1,6 @@
 # PrismForge Core-Value Beta Readiness
 
-Updated: July 16, 2026
+Updated: July 17, 2026
 
 ## Beta promise
 
@@ -27,6 +27,7 @@ Today is the action screen, Project is the context screen, Validate is the evide
 - Real-world evidence is persisted in `project_validation_experiments`.
 - Validation path history remains in `validation_paths` and `validation_path_events`.
 - Core-loop behavior is recorded through the existing `app_events` system. No duplicate analytics table was added.
+- Optional core-value feedback and explicit research-contact permission are stored in the founder-owned `core_value_feedback` table. Free-form feedback stays there and is excluded from `app_events`.
 - A core-loop completion requires saved evidence plus a changed recommendation. Page views alone cannot complete the loop.
 - Synthetic/test projects are excluded from genuine completion and return-success counts.
 
@@ -56,7 +57,9 @@ For a five-user beta, review individual failures only through the minimum safe m
 
 ## Database security status
 
-Migration `20260716000018_core_value_beta_hardening.sql` is applied to the production Supabase project.
+Migrations `20260716000018_core_value_beta_hardening.sql`, `20260717165714_core_value_feedback.sql`, and `20260717182804_core_value_feedback_cooldown.sql` are applied to the production Supabase project.
+
+The feedback migrations are additive and transactional. They enable RLS, check both founder and project ownership for authenticated reads and writes, grant only `SELECT`, `INSERT`, and `UPDATE` to authenticated users, expose no client delete path, and add a server-owned 30-day “Not now” cooldown. A transaction-rolled-back cross-user probe returned zero visible feedback rows for the non-owner.
 
 It pins safe search paths and removes anonymous/authenticated direct execution from internal rate-limit, user-creation, and trigger helper functions. `is_admin()` remains callable by authenticated users because ownership-aware RLS policies depend on it; it returns authorization state rather than privileged data. Other authenticated `SECURITY DEFINER` RPCs must retain their user/ownership checks and should be reviewed whenever edited.
 
@@ -97,13 +100,15 @@ If any step fails, do not deploy. Public pages, redirects, unit tests, and a suc
 Last known-good production deployment at the time of this pass:
 
 ```powershell
-npx vercel promote https://questmint-jyiaq0a0q-opportunityhunter.vercel.app
+npx vercel promote https://questmint-5llmwa5kr-opportunityhunter.vercel.app
 ```
 
-After promoting, verify landing, sign-in, project creation, project ownership, evidence save, and admin denial for a normal account. The database hardening migration can remain in place during an app rollback because it does not change user data or application table shape; it only narrows function permissions and fixes search paths. Re-granting anonymous execution is not a safe rollback strategy.
+This deployment corresponds to commit `caacd973d7c9726a2508ffb6d5b4bf1cfa0074f3`. After promoting, verify landing, sign-in, project creation, project ownership, evidence save, and admin denial for a normal account.
+
+Both database migrations can remain in place during an app rollback. The hardening migration narrows function permissions and fixes search paths. The feedback migration only adds an isolated table that older application code does not reference. Do not drop `core_value_feedback` during an application rollback because that would delete founder feedback and permission records.
 
 If core-loop analytics must be paused, remove only the new event calls in an app rollback. Existing event rows can remain because they are append-only diagnostics and do not alter user guidance. If beta focus mode must be backed out, restore the previous UI deployment; do not delete assumptions, experiments, or evidence.
 
 ## Current release decision
 
-The code, 182 deterministic tests, production build, public desktop page, 375-pixel mobile layout, authentication redirect, Supabase function hardening, and production dependency audit have been verified. `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities. Deployment remains blocked until the authenticated non-admin manual release gate above is completed with a real beta account.
+The code, 189 deterministic tests across 38 files, typecheck, lint with zero errors, production build, public desktop page, 375/390-pixel mobile layouts, 768-pixel tablet layout, authentication redirect, feedback RLS, Supabase function hardening, and production dependency audit have been verified. `npm audit --omit=dev --audit-level=high` reported zero vulnerabilities. Deployment remains blocked until the authenticated non-admin manual release gate above is completed with a real beta account.

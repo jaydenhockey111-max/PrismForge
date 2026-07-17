@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { ArrowRight, CheckCircle2, Pencil, Sparkles } from "lucide-react";
 import { updateBiggestQuestion } from "@/app/(app)/projects/validation-actions";
 
@@ -26,10 +26,6 @@ export function BiggestQuestionCard({
   const [draft, setDraft] = useState(statement);
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    void track("core_loop_assumption_viewed", projectId, { assumption_status: status });
-  }, [projectId, status]);
 
   return (
     <section className="mt-6 overflow-hidden rounded-[2rem] border border-violet/20 bg-gradient-to-br from-white via-violet/5 to-gold/15 p-5 shadow-card sm:p-6" aria-labelledby="biggest-question-title">
@@ -75,6 +71,7 @@ export function TrackedCoreActionLink({ projectId, href, children }: { projectId
 
 export function CoreValueFeedback({ projectId }: { projectId: string }) {
   const [choice, setChoice] = useState<FeedbackChoice | null>(null);
+  const [recommendationMoreUseful, setRecommendationMoreUseful] = useState<boolean | null>(null);
   const [followUp, setFollowUp] = useState("");
   const [sent, setSent] = useState(false);
   const [showCaseStudy, setShowCaseStudy] = useState(false);
@@ -82,18 +79,13 @@ export function CoreValueFeedback({ projectId }: { projectId: string }) {
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    const key = `prismforge_core_feedback_${projectId}`;
-    setSent(Boolean(window.localStorage.getItem(key)));
-    if (!window.localStorage.getItem(key)) void track("core_loop_feedback_prompt_viewed", projectId, {});
-  }, [projectId]);
-
   if (sent && showCaseStudy && !permissionSaved) return (
     <section className="mt-6 rounded-[2rem] border border-violet/15 bg-white p-5 shadow-card sm:p-6">
       <p className="text-xs font-black uppercase tracking-[.16em] text-violet">Optional research permission</p>
       <h2 className="mt-2 font-display text-2xl font-semibold text-ink">Would you be open to sharing your experience with the PrismForge team?</h2>
       <p className="mt-2 text-sm leading-6 text-ink/60">This records permission to contact you using your account email. It does not copy or publish private project content.</p>
-      <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={async () => { await track("case_study_permission_recorded", projectId, { permission: true, contact_preference: "account_email", milestone: "core_loop_helpful", request_id: crypto.randomUUID() }); setPermissionSaved(true); }} className="rounded-full bg-violet px-5 py-2.5 text-sm font-black text-white">Yes, you may contact me</button><button type="button" onClick={() => setPermissionSaved(true)} className="rounded-full border border-ink/15 px-5 py-2.5 text-sm font-black text-ink">Not now</button></div>
+      <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={async () => { const result = await track("case_study_permission_recorded", projectId, { permission: true, contact_preference: "account_email", milestone: "core_loop_helpful", request_id: crypto.randomUUID() }); if (result.ok) setPermissionSaved(true); else setError(`Permission could not be saved. Reference: ${result.requestId ?? "unavailable"}`); }} className="rounded-full bg-violet px-5 py-2.5 text-sm font-black text-white">Yes, you may contact me</button><button type="button" onClick={() => setPermissionSaved(true)} className="rounded-full border border-ink/15 px-5 py-2.5 text-sm font-black text-ink">Not now</button></div>
+      {error && <p role="alert" className="mt-3 text-sm font-bold text-coral">{error}</p>}
     </section>
   );
   if (sent) return null;
@@ -104,15 +96,29 @@ export function CoreValueFeedback({ projectId }: { projectId: string }) {
       <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Feedback rating">
         {(["yes", "somewhat", "no"] as const).map((value) => <button key={value} type="button" aria-pressed={choice === value} onClick={() => setChoice(value)} className={`rounded-full border px-4 py-2 text-sm font-black transition ${choice === value ? "border-violet bg-violet text-white" : "border-ink/15 bg-cream/50 text-ink hover:border-violet/40"}`}>{value === "yes" ? "Yes, clearly" : humanize(value)}</button>)}
       </div>
-      {choice && <div className="mt-4"><label htmlFor="core-feedback" className="text-sm font-black text-ink">What did it help you decide? <span className="font-normal text-ink/45">Optional</span></label><textarea id="core-feedback" value={followUp} onChange={(event) => setFollowUp(event.target.value)} maxLength={500} className="mt-2 min-h-24 w-full rounded-2xl border border-ink/15 p-3 text-sm text-ink outline-none focus:border-violet" /></div>}
+      {choice && <div className="mt-4 space-y-4">
+        <div>
+          <p className="text-sm font-black text-ink">Was the updated recommendation more useful than the original? <span className="font-normal text-ink/45">Optional</span></p>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Updated recommendation usefulness">
+            <button type="button" aria-pressed={recommendationMoreUseful === true} onClick={() => setRecommendationMoreUseful(true)} className={`rounded-full border px-4 py-2 text-sm font-black ${recommendationMoreUseful === true ? "border-violet bg-violet text-white" : "border-ink/15 text-ink"}`}>Yes</button>
+            <button type="button" aria-pressed={recommendationMoreUseful === false} onClick={() => setRecommendationMoreUseful(false)} className={`rounded-full border px-4 py-2 text-sm font-black ${recommendationMoreUseful === false ? "border-violet bg-violet text-white" : "border-ink/15 text-ink"}`}>No</button>
+          </div>
+        </div>
+        <div><label htmlFor="core-feedback" className="text-sm font-black text-ink">What did it help you decide? <span className="font-normal text-ink/45">Optional</span></label><textarea id="core-feedback" value={followUp} onChange={(event) => setFollowUp(event.target.value)} maxLength={500} className="mt-2 min-h-24 w-full rounded-2xl border border-ink/15 p-3 text-sm text-ink outline-none focus:border-violet" /></div>
+      </div>}
       <button type="button" disabled={!choice || pending} onClick={() => startTransition(async () => {
         setError("");
-        const ok = await track("core_loop_feedback_submitted", projectId, { rating: choice, follow_up: followUp.trim().slice(0, 120), request_id: crypto.randomUUID() });
-        if (!ok) { setError("Feedback could not be saved. Please try again."); return; }
-        window.localStorage.setItem(`prismforge_core_feedback_${projectId}`, new Date().toISOString());
+        const result = await track("core_loop_feedback_submitted", projectId, { rating: choice, recommendation_more_useful: recommendationMoreUseful, follow_up: followUp.trim(), request_id: crypto.randomUUID() });
+        if (!result.ok) { setError(`Feedback could not be saved. Reference: ${result.requestId ?? "unavailable"}`); return; }
         setSent(true);
-        setShowCaseStudy(choice === "yes");
+        setShowCaseStudy(choice === "yes" && result.caseStudyEligible === true);
       })} className="mt-4 rounded-full bg-moss px-5 py-2.5 text-sm font-black text-white disabled:opacity-50">{pending ? "Sending…" : "Send feedback"}</button>
+      <button type="button" disabled={pending} onClick={() => startTransition(async () => {
+        setError("");
+        const result = await track("core_loop_feedback_dismissed", projectId, { request_id: crypto.randomUUID() });
+        if (!result.ok) { setError(`Preference could not be saved. Reference: ${result.requestId ?? "unavailable"}`); return; }
+        setSent(true);
+      })} className="ml-2 mt-4 rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-black text-ink disabled:opacity-50">Not now</button>
       {error && <p role="alert" className="mt-3 text-sm font-bold text-coral">{error}</p>}
     </section>
   );
@@ -121,9 +127,10 @@ export function CoreValueFeedback({ projectId }: { projectId: string }) {
 async function track(eventName: string, projectId: string, metadata: Record<string, string | boolean | null>) {
   try {
     const response = await fetch("/api/beta-events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventName, metadata: { ...metadata, project_id: projectId } }), keepalive: true });
-    return response.ok;
+    const body = await response.json().catch(() => ({})) as { ok?: boolean; requestId?: string; caseStudyEligible?: boolean };
+    return { ok: response.ok && body.ok === true, requestId: body.requestId, caseStudyEligible: body.caseStudyEligible };
   } catch {
-    return false;
+    return { ok: false, requestId: typeof metadata.request_id === "string" ? metadata.request_id : undefined, caseStudyEligible: false };
   }
 }
 

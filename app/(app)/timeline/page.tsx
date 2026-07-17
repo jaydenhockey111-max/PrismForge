@@ -12,9 +12,9 @@ export default async function TimelinePage({ searchParams }: { searchParams: Pro
   const timeline = await loadFounderTimeline({ query: params.q, category: params.category, before: params.before });
   return <div>
     <FormMessage message={timeline.error ?? undefined} />
-    <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-violet"><History className="size-4" />Founder memory</div>
-    <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">Your founder timeline.</h1>
-    <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60 sm:text-base">A permanent record of what you learned, changed, proved, launched, and earned across every project. Quiet software activity is intentionally excluded.</p>
+    <div className="eyebrow flex items-center gap-2"><History className="size-4" />Founder memory</div>
+    <h1 className="page-title mt-3">Your founder timeline.</h1>
+    <p className="page-intro mt-4">A permanent record of what you learned, changed, proved, launched, and earned across every project. Quiet software activity is intentionally excluded.</p>
     <FounderTimeline {...timeline} referenceNow={new Date().toISOString()} />
   </div>;
 }

@@ -232,6 +232,7 @@ export type BetaEventName =
   | "core_loop_second_project_created"
   | "core_loop_ai_specialist_reused"
   | "core_loop_feedback_submitted"
+  | "core_loop_feedback_dismissed"
   | "core_loop_feedback_prompt_viewed"
   | "core_loop_error_viewed"
   | "payment_signal_recorded"

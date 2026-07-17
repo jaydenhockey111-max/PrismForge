@@ -51,7 +51,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
           <Sparkles className="size-4" />
           Pricing
         </div>
-        <h1 className="mx-auto mt-5 max-w-3xl font-display text-4xl font-semibold tracking-tight sm:text-6xl">Simple beta pricing assumptions.</h1>
+        <h1 className="mx-auto mt-5 max-w-3xl font-display text-4xl font-semibold tracking-[-.04em] sm:text-6xl">Simple beta pricing assumptions.</h1>
         <p className="mx-auto mt-4 max-w-2xl leading-7 text-white/65">Payments are paused during beta. These tiers show the intended product direction so testers can judge whether the value makes sense.</p>
         <p className="mt-4 text-sm text-white/45">Current account plan: {profile.plan}</p>
       </section>

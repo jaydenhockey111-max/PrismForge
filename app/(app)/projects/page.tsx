@@ -63,14 +63,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       <FormMessage message={params.message} type="success" />
       <FormMessage message={params.error ?? (error ? "Could not load projects yet. If this is your first time using PrismForge, run the latest Supabase migration." : undefined)} />
 
-      <div className="mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <div className="flex flex-col justify-between gap-6 border-b border-ink/10 pb-8 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-violet">
+          <div className="eyebrow flex items-center gap-2">
             <FolderKanban className="size-4" />
             Saved projects
           </div>
-          <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Your project library.</h1>
-          <p className="mt-3 max-w-2xl text-ink/60">
+          <h1 className="page-title mt-3">Your project library.</h1>
+          <p className="page-intro mt-4">
             Keep one clear current focus while preserving paused, completed, archived, and stopped project history.
           </p>
         </div>

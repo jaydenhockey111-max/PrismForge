@@ -3,15 +3,15 @@ import { cn } from "@/lib/utils";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <label suppressHydrationWarning className="grid gap-2 text-sm font-semibold text-ink">
+    <label suppressHydrationWarning className="grid gap-2.5 text-sm font-semibold text-ink">
       <span>{label}</span>
       {children}
-      {hint && <span className="text-xs font-normal text-ink/55">{hint}</span>}
+      {hint && <span className="text-xs font-normal leading-5 text-ink/55">{hint}</span>}
     </label>
   );
 }
 
-const inputStyle = "min-h-12 w-full rounded-2xl border border-ink/15 bg-white px-4 text-base text-ink outline-none transition placeholder:text-ink/35 focus:border-moss focus:ring-2 focus:ring-moss/15";
+const inputStyle = "min-h-12 w-full rounded-xl border border-ink/15 bg-white px-4 text-base text-ink shadow-[inset_0_1px_2px_rgba(24,26,25,.035)] outline-none transition placeholder:text-ink/35 hover:border-ink/25 focus:border-violet focus:ring-4 focus:ring-violet/10";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(inputStyle, className)} {...props} />;
