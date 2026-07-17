@@ -14,9 +14,9 @@ export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: "prismforge",
+  org: "prismforge-0i",
 
-  project: "javascript-nextjs",
+  project: "prismforge",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
