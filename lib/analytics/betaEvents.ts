@@ -1,0 +1,287 @@
+import "server-only";
+
+import type { Json } from "@/lib/database.types";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export type BetaEventName =
+  | "dashboard_viewed"
+  | "project_creation_page_viewed"
+  | "project_creation_page_opened"
+  | "project_creation_submit_clicked"
+  | "project_creation_client_started"
+  | "project_creation_validation_failed"
+  | "project_creation_client_timeout"
+  | "project_creation_started"
+  | "project_creation_request_sent"
+  | "project_creation_request_received"
+  | "project_creation_stage_changed"
+  | "project_creation_completed"
+  | "project_database_save_completed"
+  | "project_workspace_loaded"
+  | "next_best_action_loaded"
+  | "first_evidence_saved"
+  | "daily_quest_generated"
+  | "weekly_quests_generated"
+  | "quest_viewed"
+  | "quest_started"
+  | "quest_completed"
+  | "quest_completion_verified"
+  | "quest_completed_manually"
+  | "quest_skipped"
+  | "quest_replaced"
+  | "quest_replacement_reason_submitted"
+  | "quest_expired"
+  | "quest_progress_updated"
+  | "quest_next_best_action_linked"
+  | "quest_generation_failed"
+  | "duplicate_quest_completion_prevented"
+  | "project_creation_timed_out"
+  | "project_generation_started"
+  | "project_generation_input_rejected"
+  | "project_generation_ai_succeeded"
+  | "project_generation_fallback_used"
+  | "project_generation_completed"
+  | "project_generation_failed"
+  | "project_generation_duplicate_prevented"
+  | "project_title_generated_valid"
+  | "project_title_rejected"
+  | "project_title_fallback_used"
+  | "project_title_auto_repaired"
+  | "project_title_rename_started"
+  | "project_title_renamed"
+  | "project_title_rename_failed"
+  | "project_title_manually_renamed"
+  | "legacy_invalid_title_detected"
+  | "project_section_viewed"
+  | "project_navigation_used"
+  | "ai_team_opened"
+  | "validate_opened"
+  | "launch_opened"
+  | "ai_employee_opened"
+  | "ai_employee_started"
+  | "ai_employee_completed"
+  | "ai_employee_failed"
+  | "ai_employee_retry_clicked"
+  | "ai_employee_cache_hit"
+  | "next_best_action_selected"
+  | "validation_path_selected"
+  | "validation_path_recommended"
+  | "validation_path_activated"
+  | "validation_path_completed"
+  | "validation_path_replaced"
+  | "validation_path_paused"
+  | "validation_path_blocked"
+  | "validation_path_alternative_viewed"
+  | "validation_path_alternative_selected"
+  | "founder_validation_preference_saved"
+  | "external_evidence_reached"
+  | "avoidance_guard_triggered"
+  | "validation_next_action_started"
+  | "validation_next_action_completed"
+  | "validation_proof_recorded"
+  | "validation_decision_recorded"
+  | "project_stage_suggested"
+  | "project_stage_manually_changed"
+  | "project_stage_conflict_detected"
+  | "validation_blocker_opened"
+  | "validation_blocker_resolved"
+  | "outreach_copy_generated"
+  | "outreach_copy_copied"
+  | "generated_copy_fallback_used"
+  | "ai_output_regurgitation_detected"
+  | "ai_output_fallback_used"
+  | "project_context_personalization_applied"
+  | "project_context_personalization_missing"
+  | "slow_action_detected"
+  | "duplicate_feature_removed"
+  | "openai_generation_started"
+  | "openai_generation_completed"
+  | "openai_generation_failed"
+  | "local_fallback_used"
+  | "project_save_started"
+  | "project_save_completed"
+  | "project_save_failed"
+  | "project_redirect_started"
+  | "duplicate_submission_blocked"
+  | "field_suggestion_viewed"
+  | "field_suggestion_clicked"
+  | "value_proof_card_viewed"
+  | "value_proof_report_opened"
+  | "value_proof_viewed"
+  | "value_proof_starting_point_viewed"
+  | "value_proof_clarity_change_viewed"
+  | "value_proof_evidence_opened"
+  | "value_proof_decision_opened"
+  | "value_proof_next_step_clicked"
+  | "value_proof_explanation_opened"
+  | "value_proof_empty_state_viewed"
+  | "value_proof_summary_generated"
+  | "value_proof_data_missing"
+  | "before_after_viewed"
+  | "value_summary_copied"
+  | "decision_history_viewed"
+  | "assumption_status_updated"
+  | "value_feedback_submitted"
+  | "why_this_recommendation_opened"
+  | "guided_idea_mode_opened"
+  | "form_completed"
+  | "form_abandoned"
+  | "generate_project_started"
+  | "generate_project_completed"
+  | "generate_project_failed"
+  | "generation_diagnostic"
+  | "landing_auth_state_rendered"
+  | "start_creating_clicked"
+  | "start_creating_route_selected"
+  | "auth_redirect_triggered"
+  | "profile_repair_attempted"
+  | "auth_state_mismatch_detected"
+  | "project_opened"
+  | "progress_page_viewed"
+  | "proof_board_opened"
+  | "proof_experiment_created"
+  | "proof_experiment_updated"
+  | "proof_experiment_deleted"
+  | "launch_command_center_opened"
+  | "trust_validator_triggered"
+  | "unsupported_claim_removed"
+  | "hallucination_detected"
+  | "evidence_attached"
+  | "hypothesis_created"
+  | "assumption_created"
+  | "xp_event_awarded"
+  | "xp_event_rejected"
+  | "xp_event_duplicate_prevented"
+  | "xp_event_reversed"
+  | "level_reached"
+  | "level_reward_granted"
+  | "level_progress_viewed"
+  | "xp_explanation_opened"
+  | "evidence_verification_upgraded"
+  | "suspicious_progress_pattern_detected"
+  | "legacy_xp_migrated"
+  | "progression_reconciliation_failed"
+  | "project_library_viewed"
+  | "project_filter_applied"
+  | "project_sort_changed"
+  | "project_search_used"
+  | "resume_project_clicked"
+  | "project_focus_changed"
+  | "project_paused"
+  | "project_resumed"
+  | "project_completed"
+  | "project_archived"
+  | "project_abandoned"
+  | "project_restored"
+  | "project_soft_deleted"
+  | "project_permanent_delete_requested"
+  | "project_permanently_deleted"
+  | "project_delete_failed"
+  | "project_lifecycle_conflict"
+  | "project_switcher_opened"
+  | "project_switcher_project_selected"
+  | "closure_reflection_saved"
+  | "no_active_project_state_viewed"
+  | "cross_project_learning_viewed"
+  | "founder_pattern_identified"
+  | "founder_pattern_updated"
+  | "founder_pattern_superseded"
+  | "founder_pattern_dismissed"
+  | "founder_pattern_corrected"
+  | "founder_pattern_feedback_useful"
+  | "founder_pattern_source_opened"
+  | "validation_method_comparison_viewed"
+  | "repeated_blocker_viewed"
+  | "project_creation_history_reminder_shown"
+  | "project_creation_history_reminder_dismissed"
+  | "founder_learning_insufficient_data_viewed"
+  | "founder_learning_recalculation_failed"
+  | "founder_retrospective_requested"
+  | "founder_retrospective_completed"
+  | "founder_retrospective_failed"
+  | "founder_guidance_mode_changed"
+  | "explanation_depth_changed"
+  | "quest_intensity_changed"
+  | "historical_personalization_enabled"
+  | "historical_personalization_disabled"
+  | "historical_reminder_shown"
+  | "historical_reminder_dismissed"
+  | "personalization_reason_opened"
+  | "personalization_reset"
+  | "inferred_adaptation_recalculated"
+  | "preference_recommendation_shown"
+  | "preference_recommendation_accepted"
+  | "preference_recommendation_dismissed"
+  | "founder_pattern_used_in_guidance"
+  | "founder_pattern_excluded_from_guidance"
+  | "personalization_data_insufficient"
+  | "personalization_recalculation_failed"
+  | "core_loop_project_created"
+  | "core_loop_summary_viewed"
+  | "core_loop_assumption_viewed"
+  | "core_loop_next_action_viewed"
+  | "core_loop_next_action_started"
+  | "core_loop_support_opened"
+  | "core_loop_support_generated"
+  | "core_loop_evidence_started"
+  | "core_loop_evidence_saved"
+  | "core_loop_recommendation_updated"
+  | "core_loop_completed"
+  | "core_loop_returned_next_day"
+  | "core_loop_returned_within_seven_days"
+  | "core_loop_second_project_created"
+  | "core_loop_ai_specialist_reused"
+  | "core_loop_feedback_submitted"
+  | "core_loop_feedback_prompt_viewed"
+  | "core_loop_error_viewed"
+  | "payment_signal_recorded"
+  | "case_study_permission_recorded";
+
+export async function logBetaEvent({
+  userId,
+  projectId,
+  eventName,
+  source,
+  metadata = {},
+  throttleSeconds,
+}: {
+  userId?: string | null;
+  projectId?: string | null;
+  eventName: BetaEventName;
+  source?: string;
+  metadata?: Record<string, Json | undefined>;
+  throttleSeconds?: number;
+}) {
+  try {
+    const admin = createAdminClient();
+    if (throttleSeconds && userId) {
+      const since = new Date(Date.now() - throttleSeconds * 1000).toISOString();
+      const { data } = await admin
+        .from("app_events")
+        .select("id,metadata")
+        .eq("user_id", userId)
+        .eq("event_name", eventName)
+        .gte("created_at", since)
+        .limit(20);
+      const hasRecentEvent = (data ?? []).some((event) => {
+        const eventMetadata = event.metadata as Record<string, Json | undefined> | null;
+        return !projectId || eventMetadata?.project_id === projectId;
+      });
+      if (hasRecentEvent) return;
+    }
+
+    await admin.from("app_events").insert({
+      user_id: userId ?? null,
+      event_name: eventName,
+      metadata: {
+        ...metadata,
+        project_id: projectId ?? null,
+        source: source ?? null,
+      },
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[beta-events] app_events insert failed", error);
+    }
+  }
+}

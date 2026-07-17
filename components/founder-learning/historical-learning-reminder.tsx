@@ -1,0 +1,9 @@
+"use client";
+import { useState,useTransition } from "react";
+import Link from "next/link";
+import { History,X } from "lucide-react";
+import { submitFounderPatternFeedback } from "@/app/(app)/progress/learning-actions";
+
+export type HistoricalReminder={id:string;headline:string;explanation:string;evidenceTier:string;supportingProjectCount:number;contradictingProjectCount:number};
+export function HistoricalLearningReminder({reminders}:{reminders:HistoricalReminder[]}){const [visible,setVisible]=useState(reminders);const [pending,startTransition]=useTransition();if(!visible.length)return null;return <aside className="mt-5 rounded-[1.5rem] border border-violet/15 bg-violet/5 p-4"><p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.14em] text-violet"><History className="size-4"/>From your earlier projects</p><div className="mt-3 grid gap-3">{visible.map((item)=><div key={item.id} className="relative rounded-xl bg-white p-4 pr-11"><p className="text-sm font-black leading-6 text-ink">{item.headline}</p><p className="mt-1 text-xs leading-5 text-ink/55">{item.explanation}</p><button aria-label="Dismiss historical reminder" disabled={pending} onClick={()=>startTransition(async()=>{const result=await submitFounderPatternFeedback({insightId:item.id,feedbackType:"dismiss",requestId:crypto.randomUUID()});if(result.ok)setVisible((current)=>current.filter((row)=>row.id!==item.id));})} className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-ink/40 hover:bg-cream hover:text-ink"><X className="size-4"/></button></div>)}</div><p className="mt-3 text-xs leading-5 text-ink/45">History informs this project; current evidence still decides the next action. <Link href="/progress#founder-learning" className="font-black text-violet">Review all learning</Link></p></aside>;}
+
