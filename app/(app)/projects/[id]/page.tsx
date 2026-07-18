@@ -1,30 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowDownToLine, ArrowLeft, CalendarDays, History, Repeat2 } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, CalendarDays, History } from "lucide-react";
 import { CompetitorTable } from "@/components/founder-os/competitor-table";
 import { ContentIdeasGrid } from "@/components/founder-os/content-ideas-grid";
 import { CopySectionButton } from "@/components/founder-os/copy-section-button";
 import { LifecycleBadge, ProjectLifecycleControls } from "@/components/founder-os/project-lifecycle-controls";
-import { CompetitiveBattlecardTool, PricingTiersTool, SprintTasksTool, ValidationSurveyTool, VideoScriptsTool } from "@/components/founder-os/execution-suite";
 import { FirstDollarSprint } from "@/components/founder-os/first-dollar-sprint";
 import { LandingPagePreview } from "@/components/founder-os/landing-page-preview";
 import { LaunchCommandCenter } from "@/components/founder-os/launch-command-center";
-import { MarketPulse } from "@/components/founder-os/market-pulse";
 import { MonetizationCard } from "@/components/founder-os/monetization-card";
 import { MvpPlanCard } from "@/components/founder-os/mvp-plan-card";
 import { OpportunityScoreCard } from "@/components/founder-os/opportunity-score-card";
 import { OutreachKit } from "@/components/founder-os/outreach-kit";
 import { ProofBoard } from "@/components/founder-os/proof-board";
-import { ProjectAlphaPanel } from "@/components/founder-os/project-alpha-panel";
 import { ProjectClosureReflectionCard } from "@/components/founder-os/project-closure-reflection";
 import { ProjectStatusBadge } from "@/components/founder-os/project-status-badge";
 import { ProjectStatusSelect } from "@/components/founder-os/project-status-select";
 import { ProjectTitleEditor } from "@/components/founder-os/project-title-editor";
-import { DailyQuestCard, WeeklyQuestSummary } from "@/components/founder-os/quest-system";
 import { ReportSectionCard } from "@/components/founder-os/report-section-card";
 import { RoadmapTimeline } from "@/components/founder-os/roadmap-timeline";
-import { StartupTeamWorkspace, type EngineerOutput, type GtmPlan, type WireframeOutput } from "@/components/founder-os/startup-team-workspace";
 import { ValueProofCard } from "@/components/founder-os/value-proof-card";
 import { HistoricalLearningReminder } from "@/components/founder-learning/historical-learning-reminder";
 import { ProjectLearningControl } from "@/components/founder-learning/project-learning-control";
@@ -32,11 +27,9 @@ import { ValidationPathWorkspace } from "@/components/founder-os/validation-path
 import { BiggestQuestionCard, CoreValueFeedback, TrackedCoreActionLink } from "@/components/founder-os/core-loop-experience";
 import { ButtonLink } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
-import { RewardChestReveal } from "@/components/reward-chest-reveal";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
 import { requireProfile } from "@/lib/auth";
 import type { ProjectClosureReflection, ProjectLifecycleStatus, ProjectOutput, ProjectOutputType, ProjectValidationExperiment } from "@/lib/database.types";
-import type { CeoDirective } from "@/lib/founder-os/ceoDirective";
 import type { SprintTaskOutput } from "@/lib/founder-os/executionTools";
 import type { BusinessType, OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
 import { BUSINESS_TYPE_LABELS } from "@/lib/founder-os/helpers";
@@ -48,7 +41,6 @@ import { getValidationWorkspace } from "@/lib/founder-os/validationWorkspace.ser
 import { buildValueProofReport } from "@/lib/founder-os/valueProof";
 import { betaCohorts } from "@/lib/founder-os/coreLoop";
 import { summarizeProof } from "@/lib/proof-board";
-import { buildFounderQuestPlan } from "@/lib/progress/questPolicy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getRelevantFounderReminders } from "@/lib/founder-learning/server";
@@ -76,7 +68,7 @@ export default async function ProjectDetailPage({
   if (error || !project) {
     const { data: tombstone } = await supabase.from("deleted_project_tombstones").select("permanently_deleted_at").eq("project_id", routeParams.id).eq("user_id", profile.id).maybeSingle();
     if (!tombstone) notFound();
-    return <section className="mt-8 rounded-[2rem] border border-ink/10 bg-white p-7 shadow-card"><p className="text-xs font-black uppercase tracking-[.16em] text-coral">Project permanently deleted</p><h1 className="mt-3 font-display text-3xl font-semibold text-ink">This project can no longer be recovered.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60">Its private project content was removed on {format(new Date(tombstone.permanently_deleted_at), "MMM d, yyyy")}. Sanitized founder XP history may remain without the project content.</p><ButtonLink href="/projects" className="mt-5">Return to project library</ButtonLink></section>;
+    return <section className="mt-8 rounded-[2rem] border border-ink/10 bg-white p-7 shadow-card"><p className="text-xs font-black uppercase tracking-[.16em] text-coral">Project permanently deleted</p><h1 className="mt-3 font-display text-3xl font-semibold text-ink">This project can no longer be recovered.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60">Its private project content was removed on {format(new Date(tombstone.permanently_deleted_at), "MMM d, yyyy")}. Sanitized account history may remain without the project content.</p><ButtonLink href="/projects" className="mt-5">Return to project library</ButtonLink></section>;
   }
   await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "project_opened", source: "project_detail", metadata: { status: project.status, score: project.score }, throttleSeconds: 15 * 60 });
 
@@ -95,7 +87,7 @@ export default async function ProjectDetailPage({
           <p className="text-xs font-black uppercase tracking-[.16em] text-amber-700">Project report unavailable</p>
           <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight">This project needs a fresh Founder OS report.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60">
-            The project exists, but its saved report data is missing one or more sections needed by the workspace. Create a new project report or regenerate this one before using AI Employees.
+            The project exists, but its saved report data is missing one or more sections needed by the workspace. Create a fresh project report before continuing.
           </p>
         </section>
       </div>
@@ -198,24 +190,8 @@ export default async function ProjectDetailPage({
     logBetaEvent({userId:profile.id,projectId:project.id,eventName:"historical_reminder_shown",source:"project_detail",metadata:{reminder_count:historicalReminders.length,pattern_evidence_tier:personalization.context.relevantPatterns[0]?.evidenceTier??null,ai_used:false},throttleSeconds:24*60*60}),
   ]);
   if (personalization.context.relevantPatterns.length) await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "founder_pattern_used_in_guidance", source: "project_detail", metadata: { pattern_count: personalization.context.relevantPatterns.length, source_surface: "today", ai_used: false }, throttleSeconds: 15 * 60 });
-  const questPlan = buildFounderQuestPlan({
-    userId: profile.id,
-    project: displayProject,
-    report: displayReport,
-    proof: proofSummary,
-    experiments: proofExperiments,
-    outputs: (projectOutputs ?? []) as ProjectOutput[],
-    nextBestAction: nextAction,
-    validationPath,
-    guidancePreferences: personalization.profile.explicitPreferences,
-  });
   await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "project_workspace_loaded", source: "project_detail", metadata: { status, section: activeSection }, throttleSeconds: 15 * 60 });
   await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "next_best_action_loaded", source: "project_detail", metadata: { area: nextAction.area, status }, throttleSeconds: 15 * 60 });
-  if (questPlan.dailyQuest) {
-    await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "daily_quest_generated", source: "project_detail", metadata: { category: questPlan.dailyQuest.category, verification_method: questPlan.dailyQuest.verificationMethod, source: questPlan.dailyQuest.source, status }, throttleSeconds: 15 * 60 });
-    await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "quest_next_best_action_linked", source: "project_detail", metadata: { cadence: "daily", category: questPlan.dailyQuest.category, status }, throttleSeconds: 15 * 60 });
-  }
-  await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "weekly_quests_generated", source: "project_detail", metadata: { count: questPlan.weeklyQuests.length, completed: questPlan.weeklyCompleted, status }, throttleSeconds: 15 * 60 });
   await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "project_section_viewed", source: "project_detail", metadata: { section: activeSection }, throttleSeconds: 5 * 60 });
   await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "project_navigation_used", source: "project_detail", metadata: { section: activeSection }, throttleSeconds: 5 * 60 });
   if (activeSection === "today" || activeSection === "project") {
@@ -228,7 +204,6 @@ export default async function ProjectDetailPage({
   const projectAgeHours = (Date.now() - new Date(project.created_at).getTime()) / 3_600_000;
   if (!project.is_synthetic && projectAgeHours >= 24 && projectAgeHours < 48) await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "core_loop_returned_next_day", source: "project_detail", metadata: { cohorts }, throttleSeconds: 24 * 60 * 60 });
   if (!project.is_synthetic && projectAgeHours >= 24 && projectAgeHours <= 7 * 24) await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "core_loop_returned_within_seven_days", source: "project_detail", metadata: { cohorts }, throttleSeconds: 7 * 24 * 60 * 60 });
-  if (activeSection === "ai-team") await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "ai_team_opened", source: "project_detail", metadata: { section: activeSection }, throttleSeconds: 15 * 60 });
   if (activeSection === "validate") {
     await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "validate_opened", source: "project_detail", metadata: { section: activeSection }, throttleSeconds: 15 * 60 });
     await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "proof_board_opened", source: "project_detail", metadata: { experiment_count: proofSummary.experiment_count, confidence_score: proofSummary.confidence_score }, throttleSeconds: 15 * 60 });
@@ -261,8 +236,7 @@ export default async function ProjectDetailPage({
   }
 
   return (
-    <div>
-      <RewardChestReveal reward={query.chest ? query.reward : undefined} description={query.rewardDescription} level={query.levelUp} />
+    <div className="project-workspace">
       <FormMessage message={query.message} type="success" />
       <FormMessage message={query.error} />
 
@@ -273,9 +247,11 @@ export default async function ProjectDetailPage({
         </Link>
       </div>
 
-      <section className="surface mt-6 p-6 sm:p-8" data-beta-project-title={displayTitle} data-beta-project-status={status}>
+      <section className="surface relative mt-6 overflow-hidden p-6 sm:p-8" data-beta-project-title={displayTitle} data-beta-project-status={status}>
+        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-violet/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 left-1/3 size-64 rounded-full bg-moss/10 blur-3xl" />
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div className="min-w-0">
+          <div className="relative min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <ProjectStatusBadge status={status} />
               <LifecycleBadge status={lifecycleStatus} deletedAt={project.deleted_at} currentFocus={focus?.project_id === project.id} />
@@ -289,7 +265,7 @@ export default async function ProjectDetailPage({
             <p className="mt-4 max-w-3xl text-sm leading-6 text-ink/60">{report.summary.oneSentenceIdea}</p>
             <Link href={`/projects/${project.id}/timeline`} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-violet transition hover:text-ink"><History className="size-4" />View project timeline</Link>
           </div>
-          <div className="rounded-xl border border-ink/10 bg-cream/65 p-4 lg:w-64">
+          <div className="relative rounded-2xl border border-ink/10 bg-cream/65 p-5 lg:w-72">
             <p className="text-xs font-bold uppercase tracking-[.14em] text-ink/45">Current stage</p>
             <p className="mt-2 font-display text-2xl font-semibold capitalize text-ink">{status}</p>
             <p className="mt-1 text-xs font-semibold leading-5 text-ink/55">{proofSummary.experiment_count ? `${proofSummary.experiment_count} evidence record${proofSummary.experiment_count === 1 ? "" : "s"}` : "No evidence recorded yet"}</p>
@@ -297,7 +273,7 @@ export default async function ProjectDetailPage({
         </div>
       </section>
 
-      {(lifecycleStatus !== "active" || project.deleted_at) && <section className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${project.deleted_at ? "border-coral/25 bg-coral/10 text-ink" : "border-amber-200 bg-amber-50 text-amber-950"}`}><strong>{project.deleted_at ? "This project is in recovery." : `This project is ${lifecycleStatus}.`}</strong> {project.deleted_at ? `Restore it before active work. Recovery is available until ${project.recovery_expires_at ? format(new Date(project.recovery_expires_at), "MMM d, yyyy") : "the displayed recovery deadline"}.` : "Its stage, evidence, Value Proof, and history remain available. Restore or resume it before generating new routine quests."}</section>}
+      {(lifecycleStatus !== "active" || project.deleted_at) && <section className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${project.deleted_at ? "border-coral/25 bg-coral/10 text-ink" : "border-amber-200 bg-amber-50 text-amber-950"}`}><strong>{project.deleted_at ? "This project is in recovery." : `This project is ${lifecycleStatus}.`}</strong> {project.deleted_at ? `Restore it before active work. Recovery is available until ${project.recovery_expires_at ? format(new Date(project.recovery_expires_at), "MMM d, yyyy") : "the displayed recovery deadline"}.` : "Its stage, evidence, Value Proof, and history remain available. Restore or resume it before starting new work."}</section>}
 
       <ProjectSectionNav projectId={project.id} activeSection={activeSection} />
 
@@ -308,102 +284,75 @@ export default async function ProjectDetailPage({
             title="What should I do next?"
             description="This is the default workspace. Start here, do one real founder action, then come back when you have evidence."
           />
-          <BiggestQuestionCard
-            projectId={project.id}
-            assumptionId={currentAssumption?.id}
-            statement={currentAssumption?.statement ?? validationPath.targetAssumption}
-            status={currentAssumption?.status ?? "untested"}
-            evidenceSummary={evidenceChangeSummary(proofExperiments[0], currentAssumption?.status)}
-            nextActionHref={nextActionHref}
-          />
-          <TodayFocusCard projectId={project.id} nextAction={nextAction} status={status} proofSummary={proofSummary} historicalReminders={historicalReminders} intelligenceProfile={personalization.profile} personalizationContext={personalization.context} />
-          {questPlan.dailyQuest && <DailyQuestCard quest={questPlan.dailyQuest} />}
-          <details className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6"><summary className="cursor-pointer font-black text-violet">More planning tools</summary><div className="mt-5 border-t border-ink/10 pt-5"><WeeklyQuestSummary quests={questPlan.weeklyQuests} weeklyOutcome={questPlan.weeklyOutcome} /><FounderLoopCard /><Link href={`/projects/${project.id}?section=ai-team`} className="mt-5 inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet">Open a specialist</Link></div></details>
+          <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(20rem,.82fr)_minmax(32rem,1.18fr)] [&>*]:mt-0">
+            <BiggestQuestionCard
+              projectId={project.id}
+              assumptionId={currentAssumption?.id}
+              statement={currentAssumption?.statement ?? validationPath.targetAssumption}
+              status={currentAssumption?.status ?? "untested"}
+              evidenceSummary={evidenceChangeSummary(proofExperiments[0], currentAssumption?.status)}
+              nextActionHref={nextActionHref}
+            />
+            <TodayFocusCard projectId={project.id} nextAction={nextAction} status={status} proofSummary={proofSummary} historicalReminders={historicalReminders} intelligenceProfile={personalization.profile} personalizationContext={personalization.context} />
+          </div>
           {canAskCoreValueFeedback && <CoreValueFeedback projectId={project.id} />}
         </>
       )}
 
       {activeSection === "project" && (
-        <>
-          <section className="surface mt-6 p-6">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-          <div>
-            <p className="eyebrow">Project</p>
-            <h2 className="mt-2 section-title">What am I building?</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">
-              This is the home for the project definition, assumptions, status, notes, export controls, and strategy report. Use Today when you want the next action.
-            </p>
+        <section className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(19rem,.7fr)]">
+          <div className="surface p-6 sm:p-8">
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+              <div>
+                <p className="eyebrow">Project brief</p>
+                <h2 className="mt-2 section-title">What are we building—and what are we not building yet?</h2>
+                <p className="mt-3 max-w-4xl text-sm leading-6 text-ink/60">The durable project definition, read from left to right. Today remains the place for one next action.</p>
+              </div>
+              <Link href={`/projects/${project.id}?section=today`} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-violet/80 bg-violet px-5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-[#5649d7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2">
+                Go to Today
+              </Link>
+            </div>
+
+            <div className="mt-7 grid gap-4 lg:grid-cols-2">
+              <InfoRow label="Starting point" value={startingPoint} />
+              <InfoRow label="Structured project" value={report.summary.oneSentenceIdea} />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <InfoRow label="Who it is for" value={report.summary.targetCustomer} />
+              <InfoRow label="Problem" value={report.summary.painPoint} />
+              <InfoRow label="Smallest MVP" value={topMvp} />
+              <InfoRow label="Fastest validation" value={fastestValidation} />
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-3">
+              <InfoRow label="Value proposition" value={report.summary.whyThisCouldMakeMoney} />
+              <InfoRow label="Business model" value={report.summary.businessModel} />
+              <InfoRow label="Do not build yet" value={notBuildYet} />
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+              <InfoRow label="Assumption to test first" value={report.marketValidation.underservedAngle} />
+              <div className="rounded-2xl border border-moss/15 bg-lime/20 p-4">
+                <p className="text-xs font-black uppercase tracking-[.14em] text-moss">Useful outcome this week</p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-ink/70">{successThisWeek}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3 border-t border-ink/10 pt-6">
+              <ButtonLink href={`/projects/${project.id}/export`} variant="secondary" className="gap-2"><ArrowDownToLine className="size-4" />Export markdown</ButtonLink>
+              <CopySectionButton text={markdown} label="Copy full report" />
+            </div>
           </div>
-          <Link href={`/projects/${project.id}?section=today`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-violet/80 bg-violet px-5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-[#5649d7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2">
-            Go to Today
-          </Link>
-        </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <InfoRow label="Starting point" value={startingPoint} />
-          <InfoRow label="Structured project" value={report.summary.oneSentenceIdea} />
-        </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <InfoRow label="Who it is for" value={report.summary.targetCustomer} />
-          <InfoRow label="Problem being solved" value={report.summary.painPoint} />
-          <InfoRow label="Smallest MVP" value={topMvp} />
-          <InfoRow label="Fastest validation" value={fastestValidation} />
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          <InfoRow label="Why this fits your answers" value={`It combines ${report.input.interests} with your ${report.input.skills} skill set, ${report.input.timePerWeek} hours/week, and a ${BUSINESS_TYPE_LABELS[businessType].toLowerCase()} format.`} />
-          <InfoRow label="Assumption to test first" value={report.marketValidation.underservedAngle} />
-          <InfoRow label="What not to build yet" value={notBuildYet} />
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-moss/15 bg-white p-4">
-          <p className="text-xs font-black uppercase tracking-[.14em] text-moss">What success looks like this week</p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-ink/70">{successThisWeek}</p>
-        </div>
-      </section>
-
-          <section className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
-            <div className="rounded-[2rem] border border-ink/10 bg-white p-6 shadow-card">
-              <ProjectTitleEditor projectId={project.id} title={displayTitle} action={renameProjectTitle} />
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <InfoRow label="Audience" value={report.summary.targetCustomer} />
-                <InfoRow label="Problem" value={report.summary.painPoint} />
-                <InfoRow label="Value proposition" value={report.summary.whyThisCouldMakeMoney} />
-                <InfoRow label="Strategy" value={report.summary.businessModel} />
-              </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <ButtonLink href={`/projects/${project.id}/export`} variant="secondary" className="gap-2">
-                  <ArrowDownToLine className="size-4" />
-                  Export markdown
-                </ButtonLink>
-                <CopySectionButton text={markdown} label="Copy full report" />
-              </div>
+          <aside className="surface p-6">
+            <ProjectTitleEditor projectId={project.id} title={displayTitle} action={renameProjectTitle} />
+            <div className="mt-6"><ProjectStatusSelect projectId={project.id} status={status} suggestedStatus={validationPath.suggestedStage} disabled={lifecycleStatus !== "active" || Boolean(project.deleted_at)} action={updateProjectStatus} /></div>
+            <div className="mt-6 rounded-2xl bg-cream/60 p-4">
+              <p className="text-xs font-black uppercase tracking-[.14em] text-ink/45">Recent decisions</p>
+              {validationWorkspace.decisions.length ? validationWorkspace.decisions.slice(0, 3).map((decision) => <p key={decision.id} className="mt-2 break-words text-sm font-semibold leading-6 text-ink/60"><span className="capitalize text-ink">{decision.decision_type.replaceAll("_", " ")}:</span> {decision.rationale}</p>) : <p className="mt-2 text-sm font-semibold leading-6 text-ink/60">No evidence-based decision yet. Record one after a validation action.</p>}
+              <Link href={`/projects/${project.id}/timeline`} className="mt-3 inline-flex text-xs font-black text-violet hover:text-ink">Open decision history</Link>
             </div>
-            <div className="rounded-[2rem] border border-ink/10 bg-white p-6 shadow-card">
-              <ProjectStatusSelect projectId={project.id} status={status} suggestedStatus={validationPath.suggestedStage} disabled={lifecycleStatus !== "active" || Boolean(project.deleted_at)} action={updateProjectStatus} />
-              <div className="mt-6 rounded-2xl bg-cream/60 p-4">
-                <p className="text-xs font-black uppercase tracking-[.14em] text-ink/45">Decision history</p>
-                {validationWorkspace.decisions.length ? validationWorkspace.decisions.slice(0, 3).map((decision) => <p key={decision.id} className="mt-2 break-words text-sm font-semibold leading-6 text-ink/60"><span className="capitalize text-ink">{decision.decision_type.replaceAll("_", " ")}:</span> {decision.rationale}</p>) : <p className="mt-2 text-sm font-semibold leading-6 text-ink/60">No evidence-based decision yet. Record one after completing a validation action.</p>}
-              </div>
-              <div className="mt-6"><ProjectLifecycleControls projectId={project.id} title={displayTitle} lifecycleStatus={lifecycleStatus} lifecycleVersion={project.lifecycle_version} deletedAt={project.deleted_at} recoveryExpiresAt={project.recovery_expires_at} hasClosureReflection={Boolean(closureReflection)} /></div>
-              <ProjectLearningControl projectId={project.id} excluded={Boolean(project.learning_excluded_at)} synthetic={Boolean(project.is_synthetic)} />
-            </div>
-          </section>
-
-          <ProjectAlphaPanel
-            projectId={project.id}
-            title={displayTitle}
-            status={status}
-            score={project.score}
-            businessType={businessType}
-            targetCustomer={project.target_customer}
-            report={displayReport}
-            sprintTasks={sprintTasks}
-            proofSummary={proofSummary}
-            showNextAction={false}
-          />
-        </>
+            <div className="mt-6"><ProjectLifecycleControls projectId={project.id} title={displayTitle} lifecycleStatus={lifecycleStatus} lifecycleVersion={project.lifecycle_version} deletedAt={project.deleted_at} recoveryExpiresAt={project.recovery_expires_at} hasClosureReflection={Boolean(closureReflection)} /></div>
+            <ProjectLearningControl projectId={project.id} excluded={Boolean(project.learning_excluded_at)} synthetic={Boolean(project.is_synthetic)} />
+          </aside>
+        </section>
       )}
 
       {activeSection === "validate" && (
@@ -453,50 +402,12 @@ export default async function ProjectDetailPage({
         </>
       )}
 
-      {activeSection === "ai-team" && (
-        <>
-          <SystemHeader
-            eyebrow="Specialists"
-            title="Generate one useful asset."
-            description="Pick the helper that matches your next blocker. Nothing runs automatically, and cached results load without spending credits."
-          />
-          <StartupTeamWorkspace
-            projectId={project.id}
-            projectTitle={displayTitle}
-            status={status}
-            report={displayReport}
-            sprintTasks={sprintTasks}
-            personalizationReasons={personalization.context.explanation.slice(0, 3)}
-            savedOutputs={{
-              ceo: structuredOutput<CeoDirective>(savedOutputs.ceo_directive),
-              marketer: structuredOutput<GtmPlan>(savedOutputs.marketer_gtm_plan),
-              designer: structuredOutput<WireframeOutput>(savedOutputs.designer_wireframe),
-              engineer: structuredOutput<EngineerOutput>(savedOutputs.engineer_boilerplate),
-            }}
-          />
-          <section className="mt-6 rounded-[2rem] border border-violet/15 bg-white p-6 shadow-card">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-violet">Execution tools</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">Execution tools</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">
-              Use these when you need a survey, pricing draft, launch copy, or sprint checklist. Every button is explicit, cached, and cost-controlled.
-            </p>
-            <div className="mt-6 grid gap-5 lg:grid-cols-2">
-              <ValidationSurveyTool projectId={project.id} report={displayReport} savedOutput={savedOutputs.validation_survey} />
-              <CompetitiveBattlecardTool projectId={project.id} report={displayReport} savedOutput={savedOutputs.competitive_battlecard} />
-              <PricingTiersTool projectId={project.id} report={displayReport} savedOutput={savedOutputs.pricing_tiers} />
-              <VideoScriptsTool projectId={project.id} report={displayReport} savedOutput={savedOutputs.video_scripts} />
-              <SprintTasksTool projectId={project.id} report={displayReport} savedOutput={savedOutputs.sprint_tasks} />
-            </div>
-          </section>
-        </>
-      )}
-
       {activeSection === "progress" && (
         <>
           <SystemHeader
             eyebrow="Progress"
             title="How am I progressing?"
-            description="Track clarity, evidence, recent proof, and the founder journey without mixing in launch or AI controls."
+            description="Review evidence, decisions, completed learning loops, and the project history without vanity activity."
           />
           <ValueProofCard projectId={project.id} valueProof={valueProof} />
           <section className="mt-6 rounded-[2rem] border border-violet/15 bg-white p-6 shadow-card">
@@ -508,9 +419,9 @@ export default async function ProjectDetailPage({
           </section>
           <section className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-6 shadow-card">
             <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Founder progression</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">Progress lives here when it helps the project.</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">This project view focuses on proof and next actions. The full Progress page shows your broader founder journey.</p>
-            <ButtonLink href="/progress" variant="secondary" className="mt-5">Open full Progress</ButtonLink>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">Review the broader founder history.</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">The Review page connects meaningful activity, recorded decisions, and cross-project learning in one place.</p>
+            <div className="mt-5 flex flex-wrap gap-3"><ButtonLink href="/progress" variant="secondary">Open Review</ButtonLink><ButtonLink href={`/projects/${project.id}/timeline`} variant="ghost">Project history</ButtonLink></div>
           </section>
           <ProjectClosureReflectionCard projectId={project.id} initial={(closureReflection ?? null) as ProjectClosureReflection | null} />
         </>
@@ -524,15 +435,6 @@ export default async function ProjectDetailPage({
             description="Use this only when you are preparing for private alpha, payment intent, tester invites, and launch readiness."
           />
           <FirstDollarSprint projectTitle={displayTitle} report={displayReport} proof={proofSummary} />
-          <MarketPulse
-            projectId={project.id}
-            projectTitle={displayTitle}
-            businessType={businessType}
-            targetCustomer={project.target_customer}
-            status={status}
-            score={project.score}
-            report={displayReport}
-          />
           <LaunchCommandCenter
             projectId={project.id}
             title={displayTitle}
@@ -563,25 +465,26 @@ export default async function ProjectDetailPage({
             <p className="text-xs font-black uppercase tracking-[.16em] text-violet">Strategy report</p>
             <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">Reference the full report without extra buttons.</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">
-              This section is intentionally informational. If you want generated assets, open AI Team.
+              This section is intentionally informational. It preserves the original strategy without competing with Today or Validate.
             </p>
           </section>
 
-          <section className="mt-6 grid gap-6 lg:grid-cols-[420px_1fr]">
-            <OpportunityScoreCard score={report.score} />
-            <ReportSectionCard kicker="Business idea" title="What to build and why">
-              <div className="grid gap-4 text-sm leading-7 text-ink/65">
-                <InfoRow label="Target customer" value={report.summary.targetCustomer} />
-                <InfoRow label="Pain point" value={report.summary.painPoint} />
-                <InfoRow label="Why now" value={report.summary.whyNow} />
-                <InfoRow label="Why this could make money" value={report.summary.whyThisCouldMakeMoney} />
-                <InfoRow label="Business model" value={report.summary.businessModel} />
-              </div>
-            </ReportSectionCard>
-          </section>
+          <p className="mt-6 text-xs font-bold uppercase tracking-[.14em] text-ink/45">On larger screens, scroll sideways to read the report as a sequence.</p>
+          <div className="project-report-rail mt-4 grid gap-6">
+            <div className="project-report-panel grid gap-6 lg:grid-cols-[20rem_1fr]">
+              <OpportunityScoreCard score={report.score} />
+              <ReportSectionCard kicker="Business idea" title="What to build and why">
+                <div className="grid gap-4 text-sm leading-7 text-ink/65">
+                  <InfoRow label="Target customer" value={report.summary.targetCustomer} />
+                  <InfoRow label="Pain point" value={report.summary.painPoint} />
+                  <InfoRow label="Why now" value={report.summary.whyNow} />
+                  <InfoRow label="Why this could make money" value={report.summary.whyThisCouldMakeMoney} />
+                  <InfoRow label="Business model" value={report.summary.businessModel} />
+                </div>
+              </ReportSectionCard>
+            </div>
 
-          <div className="mt-8 grid gap-6">
-            <ReportSectionCard kicker="Market validation" title="Validate before you build">
+            <div className="project-report-panel"><ReportSectionCard kicker="Market validation" title="Validate before you build">
               <SectionHeaderCopy text={sectionText("Market validation", report.marketValidation)} />
               <div className="grid gap-5 md:grid-cols-2">
                 <ListBlock title="Search demand assumptions" items={report.marketValidation.searchDemandAssumptions} />
@@ -593,37 +496,37 @@ export default async function ProjectDetailPage({
                 <p className="font-bold text-moss">Underserved angle</p>
                 <p className="mt-2 leading-7 text-ink/65">{report.marketValidation.underservedAngle}</p>
               </div>
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="Competitors" title="Competitor analysis">
+            <div className="project-report-panel"><ReportSectionCard kicker="Competitors" title="Competitor analysis">
               <SectionHeaderCopy text={sectionText("Competitors", report.competitors)} />
               <CompetitorTable competitors={report.competitors} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="MVP" title="MVP builder">
+            <div className="project-report-panel"><ReportSectionCard kicker="MVP" title="MVP builder">
               <SectionHeaderCopy text={sectionText("MVP", report.mvpPlan)} />
               <MvpPlanCard plan={report.mvpPlan} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="Money" title="Monetization plan">
+            <div className="project-report-panel"><ReportSectionCard kicker="Money" title="Monetization plan">
               <SectionHeaderCopy text={sectionText("Monetization", report.monetizationPlan)} />
               <MonetizationCard plan={report.monetizationPlan} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="Distribution" title="Content engine">
+            <div className="project-report-panel"><ReportSectionCard kicker="Distribution" title="Content engine">
               <SectionHeaderCopy text={sectionText("Content", report.contentPlan)} />
               <ContentIdeasGrid plan={report.contentPlan} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="Landing page" title="Landing page copy">
+            <div className="project-report-panel"><ReportSectionCard kicker="Landing page" title="Landing page copy">
               <SectionHeaderCopy text={sectionText("Landing page", report.landingPageCopy)} />
               <LandingPagePreview copy={report.landingPageCopy} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
 
-            <ReportSectionCard kicker="Execution" title="Founder roadmap">
+            <div className="project-report-panel"><ReportSectionCard kicker="Execution" title="Founder roadmap">
               <SectionHeaderCopy text={sectionText("Roadmap", report.executionRoadmap)} />
               <RoadmapTimeline roadmap={report.executionRoadmap} />
-            </ReportSectionCard>
+            </ReportSectionCard></div>
           </div>
         </div>
       </details>
@@ -634,8 +537,8 @@ export default async function ProjectDetailPage({
 
 function ProjectSectionNav({ projectId, activeSection }: { projectId: string; activeSection: ProjectSection }) {
   return (
-    <nav className="sticky top-3 z-10 mt-6 rounded-[2rem] border border-ink/10 bg-white/90 p-2 shadow-card backdrop-blur" aria-label="Project workspace sections">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+    <nav className="sticky top-3 z-10 mt-6 overflow-hidden rounded-2xl border border-ink/10 bg-white/90 p-2 shadow-card backdrop-blur" aria-label="Project workspace sections">
+      <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {PROJECT_SECTIONS.map((section) => {
           const active = section.id === activeSection;
           return (
@@ -643,7 +546,7 @@ function ProjectSectionNav({ projectId, activeSection }: { projectId: string; ac
               key={section.id}
               href={`/projects/${projectId}?section=${section.id}`}
               aria-current={active ? "page" : undefined}
-              className={`rounded-[1.35rem] px-4 py-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-sm ${
+              className={`min-w-[10rem] flex-1 rounded-xl px-4 py-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss focus-visible:ring-offset-2 hover:-translate-y-0.5 hover:shadow-sm ${
                 active ? "bg-ink text-white" : "bg-cream/60 text-ink hover:bg-white"
               }`}
             >
@@ -734,44 +637,6 @@ function TodayFocusCard({
   );
 }
 
-function FounderLoopCard() {
-  const steps = [
-    "Decide what to test",
-    "Contact real people",
-    "Log evidence",
-    "Improve, pivot, or continue",
-    "Repeat",
-  ];
-
-  return (
-    <section className="mt-8 rounded-[2rem] border border-violet/15 bg-gradient-to-br from-white via-violet/5 to-lime/20 p-6 shadow-card">
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-violet">
-            <Repeat2 className="size-4" />
-            Founder Loop
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">PrismForge turns every plan into one real-world action.</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
-            AI helps you think faster, but the product loop is proof: send one message, log what happened, and let the next action update.
-          </p>
-        </div>
-        <a href="#next-best-action" className="inline-flex min-h-11 items-center justify-center rounded-full bg-gold px-5 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss focus-visible:ring-offset-2">
-          Start with Next Best Action
-        </a>
-      </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {steps.map((step, index) => (
-          <div key={step} className="rounded-2xl border border-ink/10 bg-white p-4">
-            <span className="grid size-8 place-items-center rounded-full bg-ink text-xs font-black text-white">{index + 1}</span>
-            <p className="mt-3 text-sm font-black leading-5 text-ink/75">{step}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-ink/10 bg-cream/45 p-4">
@@ -822,10 +687,6 @@ function outputsByType(outputs: ProjectOutput[]) {
     acc[output.output_type] = output.content_json;
     return acc;
   }, {} as Partial<Record<ProjectOutputType, ProjectOutput["content_json"]>>);
-}
-
-function structuredOutput<T>(value: unknown): T | null {
-  return isRecord(value) ? value as T : null;
 }
 
 function isUsableOpportunityReport(value: unknown): value is OpportunityReport {

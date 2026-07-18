@@ -1,0 +1,55 @@
+warning: in the working copy of 'app/(app)/billing/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/dashboard/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/generate/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/help/faq/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/help/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/pricing/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/progress/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/projects/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(app)/settings/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/(marketing)/privacy/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/globals.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/app-navigation.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/beta-handbook.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-intelligence/adaptation-summary.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-intelligence/guidance-settings-card.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-os/founder-timeline.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-os/project-closure-reflection.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-os/project-lifecycle-controls.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-os/project-organizer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/founder-os/validation-path-workspace.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/site-header.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/brand.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/founder-os/projectNavigation.test.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/founder-os/projectNavigation.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tailwind.config.ts', LF will be replaced by CRLF the next time Git touches it
+ app/(app)/billing/page.tsx                         |   4 [32m+[m[31m-[m
+ app/(app)/dashboard/page.tsx                       |  67 [32m+[m[31m--[m
+ app/(app)/generate/page.tsx                        |   2 [32m+[m[31m-[m
+ app/(app)/help/faq/page.tsx                        |  10 [32m+[m[31m-[m
+ app/(app)/help/page.tsx                            |   2 [32m+[m[31m-[m
+ app/(app)/layout.tsx                               |  12 [32m+[m[31m-[m
+ app/(app)/pricing/page.tsx                         |   2 [32m+[m[31m-[m
+ app/(app)/progress/page.tsx                        | 520 [32m+++++++[m[31m--------------[m
+ app/(app)/projects/[id]/page.tsx                   | 349 [32m+++++[m[31m---------[m
+ app/(app)/settings/page.tsx                        |   9 [32m+[m[31m-[m
+ app/(marketing)/privacy/page.tsx                   |   6 [32m+[m[31m-[m
+ app/globals.css                                    | 121 [32m++++[m[31m-[m
+ app/layout.tsx                                     |  22 [32m+[m[31m-[m
+ components/app-navigation.tsx                      |   8 [32m+[m[31m-[m
+ components/beta-handbook.tsx                       |  28 [32m+[m[31m-[m
+ .../founder-intelligence/adaptation-summary.tsx    |   2 [32m+[m[31m-[m
+ .../guidance-settings-card.tsx                     |   6 [32m+[m[31m-[m
+ components/founder-os/founder-timeline.tsx         |   5 [32m+[m[31m-[m
+ .../founder-os/project-closure-reflection.tsx      |   4 [32m+[m[31m-[m
+ .../founder-os/project-lifecycle-controls.tsx      |   2 [32m+[m[31m-[m
+ components/founder-os/project-organizer.tsx        |   2 [32m+[m[31m-[m
+ .../founder-os/validation-path-workspace.tsx       |   2 [32m+[m[31m-[m
+ components/site-header.tsx                         |   2 [32m+[m
+ lib/brand.ts                                       |   2 [32m+[m[31m-[m
+ lib/founder-os/projectNavigation.test.ts           |   8 [32m+[m[31m-[m
+ lib/founder-os/projectNavigation.ts                |   5 [32m+[m[31m-[m
+ tailwind.config.ts                                 |  20 [32m+[m[31m-[m
+ 27 files changed, 483 insertions(+), 739 deletions(-)

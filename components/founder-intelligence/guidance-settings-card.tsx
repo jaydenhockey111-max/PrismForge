@@ -12,7 +12,7 @@ export function GuidanceSettingsCard({ profile }: { profile: FounderIntelligence
         <div className="max-w-3xl">
           <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[.16em] text-violet"><BrainCircuit className="size-4" />Guidance style</p>
           <h2 className="mt-2 font-display text-3xl font-semibold text-ink">Choose how PrismForge helps you.</h2>
-          <p className="mt-2 text-sm leading-6 text-ink/60">Your choices override historical recommendations. This changes presentation and task scope—not evidence rules, XP, access, or project validation.</p>
+          <p className="mt-2 text-sm leading-6 text-ink/60">Your choices override historical recommendations. This changes presentation and action scope—not evidence rules, access, or project validation.</p>
         </div>
         <div className="rounded-2xl border border-moss/15 bg-white px-4 py-3 text-sm font-semibold text-ink/70">
           <ShieldCheck className="mr-2 inline size-4 text-moss" />No automatic AI calls
@@ -31,7 +31,7 @@ export function GuidanceSettingsCard({ profile }: { profile: FounderIntelligence
               <option value="brief">Brief</option><option value="standard">Standard</option><option value="detailed">Detailed</option>
             </Select>
           </Field>
-          <Field label="Weekly Pace" hint="Pace changes quest count and scope, never XP values.">
+          <Field label="Action Pace" hint="Pace changes recommendation scope, never evidence rules.">
             <Select name="quest_intensity" defaultValue={preferences.questIntensity}>
               <option value="light">Light</option><option value="standard">Standard</option><option value="ambitious">Ambitious</option>
             </Select>
@@ -50,7 +50,7 @@ export function GuidanceSettingsCard({ profile }: { profile: FounderIntelligence
 
       <form action={resetFounderPersonalization} className="mt-5 border-t border-ink/10 pt-5">
         <Button type="submit" variant="secondary" className="gap-2"><RefreshCcw className="size-4" />Reset inferred personalization</Button>
-        <p className="mt-2 text-xs leading-5 text-ink/50">Rebuilds derived guidance from currently authorized history. It keeps your explicit choices and does not award XP.</p>
+        <p className="mt-2 text-xs leading-5 text-ink/50">Rebuilds derived guidance from currently authorized history while keeping your explicit choices.</p>
       </form>
     </section>
   );

@@ -51,7 +51,7 @@ export function ProjectOrganizer({ projects, referenceNow }: { projects: Organiz
   }
 
   return <div className="mt-8">
-    {current ? <CurrentFocus project={current} pending={pending} onResume={() => resume(current)} /> : <section className="rounded-[2rem] border border-dashed border-violet/30 bg-violet/5 p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-violet">No current focus</p><h2 className="mt-2 font-display text-2xl font-semibold text-ink">Choose one active project to prioritize.</h2><p className="mt-2 text-sm leading-6 text-ink/60">Other active projects stay active. Selecting a focus does not change stage, award XP, or call AI.</p></section>}
+    {current ? <CurrentFocus project={current} pending={pending} onResume={() => resume(current)} /> : <section className="rounded-[2rem] border border-dashed border-violet/30 bg-violet/5 p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-violet">No current focus</p><h2 className="mt-2 font-display text-2xl font-semibold text-ink">Choose one active project to prioritize.</h2><p className="mt-2 text-sm leading-6 text-ink/60">Other active projects stay active. Selecting a focus does not change stage or call AI.</p></section>}
     {message && <p role="status" className="mt-4 rounded-xl bg-coral/10 p-3 text-sm font-semibold text-coral">{message}</p>}
     <section className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-4 shadow-card sm:p-5">
       <div className="grid gap-4 lg:grid-cols-[1fr_190px_210px]">

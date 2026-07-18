@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ButtonLink } from "@/components/ui/button";
 import { canAccessAdmin } from "@/lib/admin";
 import { getCurrentProfile } from "@/lib/auth";
@@ -12,6 +13,7 @@ export async function SiteHeader() {
       <div className="mx-auto flex min-h-[4.5rem] max-w-7xl items-center justify-between gap-5 px-5 lg:px-8">
         <Logo />
         <nav className="flex items-center gap-2" aria-label="Main navigation">
+          <ThemeToggle compact />
           <Link className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-ink/60 hover:bg-ink/5 hover:text-ink md:block" href="/support">Support</Link>
           {profile ? (
             <>

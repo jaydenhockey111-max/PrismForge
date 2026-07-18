@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ArrowRight, ArrowUpRight, CheckCircle2, FolderKanban, HelpCircle, MessageCircle, Rocket, Trophy, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { BetaGuideLauncher } from "@/components/beta-guide-launcher";
 import { ProjectStatusBadge } from "@/components/founder-os/project-status-badge";
 import { LifecycleBadge } from "@/components/founder-os/project-lifecycle-controls";
-import { RewardChestReveal } from "@/components/reward-chest-reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
@@ -12,7 +11,6 @@ import { requireProfile } from "@/lib/auth";
 import type { BusinessType, ProjectStatus } from "@/lib/founder-os/types";
 import { BUSINESS_TYPE_LABELS, PROJECT_STATUSES } from "@/lib/founder-os/helpers";
 import { getSafeDisplayProjectTitle } from "@/lib/founder-os/titleQuality";
-import { levelProgress } from "@/lib/gamification/config";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard" };
@@ -21,17 +19,16 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ message?: string; error?: string; chest?: string; reward?: string; rewardDescription?: string; levelUp?: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
 }) {
   const [profile, params, supabase] = await Promise.all([requireProfile(), searchParams, createClient()]);
   await logBetaEvent({ userId: profile.id, eventName: "dashboard_viewed", source: "dashboard", throttleSeconds: 15 * 60 });
   const db = supabase as any;
   const issues: string[] = [];
-  const [recentProjects, totalProjects, statusCounts, xpRow, focusRow, activeProjectCount] = await Promise.all([
+  const [recentProjects, totalProjects, statusCounts, focusRow, activeProjectCount] = await Promise.all([
     safeRows(db.from("opportunity_projects").select("id,title,business_type,target_customer,score,status,lifecycle_status,last_meaningful_activity_at,updated_at,report_json").eq("user_id", profile.id).is("deleted_at", null).order("last_meaningful_activity_at", { ascending: false }).limit(6), issues),
     safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).is("deleted_at", null), issues),
     Promise.all(PROJECT_STATUSES.map(async (status) => [status, await safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).eq("lifecycle_status", "active").is("deleted_at", null).eq("status", status), issues)] as const)),
-    safeMaybeSingle(db.from("user_xp").select("*").eq("user_id", profile.id).maybeSingle(), issues),
     safeMaybeSingle<{ project_id?: string | null }>(db.from("founder_project_focus").select("project_id").eq("user_id", profile.id).maybeSingle(), issues),
     safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).eq("lifecycle_status", "active").is("deleted_at", null), issues),
   ]);
@@ -44,8 +41,6 @@ export default async function DashboardPage({
   }
   const safeRecentProjects = [...safeRecentProjectsUnsorted].sort((a, b) => Number(b.id === focusRow?.project_id) - Number(a.id === focusRow?.project_id)).slice(0, 4);
   const name = profile.name?.split(" ")[0] ?? "founder";
-  const totalXp = Number((xpRow as { total_xp?: number | null } | null)?.total_xp ?? 0);
-  const progress = levelProgress(totalXp);
   const nextMove = getDashboardNextMove({
     totalProjects,
     recentProjectId: focusRow?.project_id ?? safeRecentProjects.find((project: any) => project.lifecycle_status === "active")?.id,
@@ -58,7 +53,6 @@ export default async function DashboardPage({
 
   return (
     <div>
-      <RewardChestReveal reward={params.chest ? params.reward : undefined} description={params.rewardDescription} level={params.levelUp} />
       <FormMessage message={params.message} type="success" />
       <FormMessage message={params.error ?? (issues.length ? "Some dashboard data could not load. If this is a fresh install, run the latest Supabase migration." : undefined)} />
 
@@ -94,27 +88,6 @@ export default async function DashboardPage({
         </section>
       )}
 
-      <section className="mt-8">
-        <div className="surface p-6">
-          <p className="eyebrow">One simple loop</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {["Open one project", "Test the biggest question", "Record what happened", "Use the updated action"].map((step, index) => (
-              <div key={step} className="flex gap-3 rounded-xl border border-ink/[.07] bg-cream/55 p-4">
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-bold text-violet shadow-sm">{index + 1}</span>
-                <p className="pt-0.5 text-sm font-semibold leading-6 text-ink/70">{step}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <details className="surface mt-8 p-5"><summary className="cursor-pointer text-sm font-bold text-violet">Open activity overview</summary><section className="mt-5 grid gap-4 border-t border-ink/10 pt-5 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={<FolderKanban className="size-5" />} label="Active projects" value={activeProjectCount} detail={`${totalProjects} preserved across your project library`} tone="sky" />
-        <StatCard icon={<Trophy className="size-5" />} label="Founder level" value={progress.level} detail={`${totalXp} XP from meaningful actions`} tone="gold" />
-        <StatCard icon={<Rocket className="size-5" />} label="Building/launched" value={(counts.building ?? 0) + (counts.launched ?? 0)} detail="Projects that moved beyond idea mode" tone="lime" />
-        <StatCard icon={<Users className="size-5" />} label="Validation focus" value={counts.validating ?? 0} detail="Projects currently proving the pain" tone="violet" />
-      </section></details>
-
       <section className="mt-10">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
@@ -147,41 +120,7 @@ export default async function DashboardPage({
         )}
       </section>
 
-      <section className="mt-10 grid gap-4 md:grid-cols-3">
-        <QuickLink href="/help/faq" icon={<HelpCircle className="size-5" />} title="Not sure what something means?" text="Read the FAQ before getting lost in the interface." />
-        <QuickLink href="/beta-guide" icon={<CheckCircle2 className="size-5" />} title="Testing PrismForge?" text="Use the beta guide for the recommended test flow." />
-        <QuickLink href="/help" icon={<MessageCircle className="size-5" />} title="Something confusing or broken?" text="Send beta support a clear note or use the feedback button." />
-      </section>
     </div>
-  );
-}
-
-function StatCard({ icon, label, value, detail, tone }: { icon: React.ReactNode; label: string; value: string | number; detail: string; tone: "sky" | "gold" | "lime" | "violet" }) {
-  const tones = {
-    sky: "bg-sky/35 border-blue-100",
-    gold: "bg-gold/20 border-gold/30",
-    lime: "bg-lime/30 border-moss/15",
-    violet: "bg-violet/10 border-violet/15",
-  };
-  return (
-    <div className={`rounded-xl border p-5 ${tones[tone]}`}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[.14em] text-ink/65">{label}</p>
-        <div className="grid size-10 place-items-center rounded-xl bg-white/80 text-violet shadow-sm">{icon}</div>
-      </div>
-      <p className="mt-5 font-display text-4xl font-semibold tracking-tight text-ink">{value}</p>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink/60">{detail}</p>
-    </div>
-  );
-}
-
-function QuickLink({ href, icon, title, text }: { href: string; icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <Link href={href} className="group surface-flat p-5 transition hover:-translate-y-px hover:border-ink/20 hover:shadow-card">
-      <div className="grid size-10 place-items-center rounded-xl bg-violet/10 text-violet">{icon}</div>
-      <h3 className="mt-4 font-display text-xl font-semibold tracking-[-.02em] text-ink">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-ink/60">{text}</p>
-    </Link>
   );
 }
 

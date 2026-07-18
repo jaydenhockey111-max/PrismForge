@@ -1,13 +1,13 @@
-import { CheckCircle2, Compass, FlaskConical, MessageCircle, Radar, Rocket, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { CheckCircle2, Compass, FlaskConical, Lightbulb, MessageCircle, Rocket, ShieldCheck, Sparkles } from "lucide-react";
 import { APP_NAME } from "@/lib/brand";
 
-export const betaQuestSteps = [
+export const betaTestSteps = [
   "Create one project.",
-  "Open the project page.",
-  "Try CEO AI.",
-  "Generate a Validation Survey.",
-  "Add one Proof Board experiment.",
-  "Check Local Market Pulse preview.",
+  "Read the Biggest Question.",
+  "Start the Next Best Action.",
+  "Run one small real-world test.",
+  "Record the result in Proof Board.",
+  "Review the updated recommendation.",
   "Review Launch Command Center.",
   "Submit feedback.",
 ] as const;
@@ -22,14 +22,14 @@ export function BetaHandbook({ compact = false }: { compact?: boolean }) {
         </p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight sm:text-5xl">How to test PrismForge</h1>
         <p className="mt-4 max-w-3xl leading-7 text-white/78">
-          PrismForge is an AI Founder Operating System. The beta goal is simple: turn an idea into a project, use the AI team and execution tools, collect real-world proof, then decide what to do next.
+          PrismForge is an evidence-first founder workspace. The beta goal is simple: turn an idea into a project, test its biggest uncertainty, record real-world proof, then use that evidence to decide what to do next.
         </p>
       </section>
 
       <section className="rounded-[2rem] border border-violet/15 bg-white p-6 shadow-card">
         <p className="text-xs font-black uppercase tracking-[.16em] text-violet">The core loop</p>
         <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {betaQuestSteps.map((step, index) => (
+          {betaTestSteps.map((step, index) => (
             <div key={step} className="flex gap-3 rounded-2xl border border-ink/10 bg-cream/55 p-4">
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-ink text-xs font-black text-white">{index + 1}</span>
               <p className="pt-1 text-sm font-semibold leading-6 text-ink/80">{step}</p>
@@ -40,10 +40,10 @@ export function BetaHandbook({ compact = false }: { compact?: boolean }) {
 
       <section className="grid gap-4 md:grid-cols-2">
         <HandbookCard icon={<Rocket className="size-5" />} title="Generate a project" text="Use a real idea or a fake one. The report gives you the business angle, MVP plan, pricing assumptions, content hooks, and launch roadmap." />
-        <HandbookCard icon={<Users className="size-5" />} title="Consult the AI team" text="CEO, Marketer, Designer, and Engineer AI only run when you click. Cached results appear later so beta testing does not accidentally burn credits." />
-        <HandbookCard icon={<FlaskConical className="size-5" />} title="Use the Execution Suite" text="Generate practical assets like validation surveys, pricing tiers, competitive battlecards, video scripts, and sprint tasks." />
+        <HandbookCard icon={<Lightbulb className="size-5" />} title="Focus the uncertainty" text="Start with the Biggest Question and one Next Best Action. They keep the project centered on what must be learned before more building." />
+        <HandbookCard icon={<FlaskConical className="size-5" />} title="Run a small test" text="Use Validate to choose a practical experiment, contact real people, and capture a factual outcome before expanding the product." />
         <HandbookCard icon={<ShieldCheck className="size-5" />} title="Log proof" text="Proof Board is where the app becomes real. Add conversations, replies, waitlist signups, payment intent, or revenue. No OpenAI is used here." />
-        <HandbookCard icon={<Radar className="size-5" />} title="Check Local Market Pulse" text="This is a local preview during beta. It uses saved project context only. External search providers and background monitoring are not enabled." />
+        <HandbookCard icon={<CheckCircle2 className="size-5" />} title="Review what changed" text="Use Review for evidence, decisions, meaningful history, and patterns from earlier projects. Current evidence still controls the next action." />
         <HandbookCard icon={<Compass className="size-5" />} title="Review Launch Command Center" text="Use the checklist and launch readiness score to see whether this idea is ready for friends, testers, or more validation." />
       </section>
 
@@ -65,8 +65,8 @@ export function BetaHandbook({ compact = false }: { compact?: boolean }) {
       <section className="rounded-[2rem] border border-ink/10 bg-white p-6 shadow-card">
         <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Beta expectations</p>
         <div className="mt-4 grid gap-3 text-sm font-medium leading-6 text-ink/75">
-          <p>Some features are experimental, limited, or local previews. That is expected.</p>
-          <p>OpenAI should only run after explicit generation clicks. Project pages, Proof Board, notes, checklists, exports, and Market Pulse preview should not spend AI credits on page load.</p>
+          <p>Some features are experimental or limited. That is expected.</p>
+          <p>OpenAI should only run after explicit generation clicks. Opening project pages, Proof Board, notes, checklists, exports, and Review should not spend AI credits.</p>
           <p>Payments are not part of this beta test. Pricing is shown for product clarity, but checkout is intentionally paused unless the founder enables it later.</p>
         </div>
       </section>

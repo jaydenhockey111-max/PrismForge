@@ -43,7 +43,7 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="mt-6 rounded-xl border border-violet/15 bg-violet/[.045] px-4 py-3 text-sm leading-6 text-ink/60">
-        <span className="font-semibold text-ink">Personalized defaults:</span> {intelligence.profile.explicitPreferences.guidanceMode} guidance, {intelligence.profile.explicitPreferences.questIntensity} weekly pace. You can override every saved suggestion below.
+        <span className="font-semibold text-ink">Personalized defaults:</span> {intelligence.profile.explicitPreferences.guidanceMode} guidance, {intelligence.profile.explicitPreferences.questIntensity} action pace. You can override every saved suggestion below.
       </section>
 
       <form id="founder-generate-form" action={generateFounderProject} className="mt-8 rounded-[1.5rem] border border-ink/10 bg-white p-6 shadow-card sm:p-8 lg:p-10">

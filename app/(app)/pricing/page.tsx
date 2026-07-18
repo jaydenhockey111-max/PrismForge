@@ -32,7 +32,7 @@ const tiers = [
     price: "$49/mo",
     icon: <Crown className="size-5" />,
     description: "For serious operators turning validation, proof, and launch work into a repeatable system.",
-    features: ["Everything in Pro", "Higher beta AI limits", "Deeper founder progress insights", "Launch Command Center", "First Dollar Sprint", "Local Market Pulse preview"],
+    features: ["Everything in Pro", "Higher beta AI limits", "Cross-project learning", "Launch Command Center", "First Dollar Sprint", "Full evidence and decision history"],
     action: "View beta access",
     href: "/pricing",
     highlighted: false,

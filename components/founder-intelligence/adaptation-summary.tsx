@@ -17,7 +17,7 @@ export function AdaptationSummary({ profile, source }: { profile: FounderIntelli
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Guidance Style" value={label(profile.explicitPreferences.guidanceMode)} />
         <Stat label="Explanation Detail" value={label(profile.explicitPreferences.explanationDepth)} />
-        <Stat label="Weekly Pace" value={label(profile.explicitPreferences.questIntensity)} />
+        <Stat label="Action Pace" value={label(profile.explicitPreferences.questIntensity)} />
         <Stat label="Eligible History" value={`${experience.eligibleProjectCount} project${experience.eligibleProjectCount === 1 ? "" : "s"}`} />
       </div>
       <details className="mt-5 rounded-2xl border border-ink/10 bg-cream/45 p-4 text-sm text-ink/65">

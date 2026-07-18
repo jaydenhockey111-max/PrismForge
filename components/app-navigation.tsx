@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChartNoAxesColumnIncreasing,
+  BookOpenCheck,
   CircleHelp,
-  Clock3,
   FolderKanban,
   LayoutDashboard,
   Plus,
@@ -21,8 +20,7 @@ const primaryLinks = [
 ] as const;
 
 const secondaryLinks = [
-  { href: "/timeline", label: "Timeline", icon: Clock3 },
-  { href: "/progress", label: "Progress", icon: ChartNoAxesColumnIncreasing },
+  { href: "/progress", label: "Review", icon: BookOpenCheck },
 ] as const;
 
 const utilityLinks = [
@@ -47,7 +45,7 @@ export function AppNavigation({ admin = false, mobile = false }: { admin?: boole
   return (
     <nav className="grid gap-6" aria-label="Product navigation">
       <NavigationGroup label="Workspace" items={primaryLinks} pathname={pathname} />
-      <NavigationGroup label="Review" items={secondaryLinks} pathname={pathname} />
+      <NavigationGroup label="Learn" items={secondaryLinks} pathname={pathname} />
       <NavigationGroup label="Account" items={utilities} pathname={pathname} />
     </nav>
   );

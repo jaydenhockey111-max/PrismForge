@@ -14,15 +14,15 @@ const faqs = [
   },
   {
     question: "What should I do first?",
-    answer: "Create one project, open it, read the Next Best Action, use one AI Employee or validation tool, then contact real people and log what happened in Proof Board.",
+    answer: "Create one project, read its Biggest Question and Next Best Action, run one small test with real people, then log what happened in Proof Board.",
   },
   {
     question: "What is a project?",
-    answer: "A project is one business idea workspace. It stores the report, AI outputs, proof experiments, notes, launch checklist, and local Market Pulse preview for that idea.",
+    answer: "A project is one business idea workspace. It keeps the report, biggest question, next action, proof experiments, decisions, notes, launch checklist, and meaningful history together.",
   },
   {
     question: "Does opening a project spend OpenAI credits?",
-    answer: "No. Project pages, Proof Board, notes, checklists, exports, and Local Market Pulse preview should not call OpenAI on page load. AI credits are only used after explicit generation clicks on approved features.",
+    answer: "No. Project pages, Proof Board, notes, checklists, exports, and Review should not call OpenAI on page load. AI credits are only used after explicit generation clicks on approved features.",
   },
   {
     question: "Why do some AI buttons show cached or cooldown states?",
@@ -37,8 +37,8 @@ const faqs = [
     answer: "Start with a tiny validation experiment: contact 10 people in your target audience and ask about the pain point before building more features. Planned experiments can start with zero metrics.",
   },
   {
-    question: "What is Local Market Pulse?",
-    answer: "During beta, Market Pulse is a local preview based on saved project context. It does not connect to external web data or run in the background.",
+    question: "What is Review?",
+    answer: "Review connects recorded evidence, decisions, meaningful history, and reusable learning from earlier projects. It avoids activity scores so the next recommendation stays grounded in outcomes.",
   },
   {
     question: "Can I pay for PrismForge yet?",
