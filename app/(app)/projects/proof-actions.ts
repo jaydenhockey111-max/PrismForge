@@ -230,6 +230,8 @@ function normalizePayload(input: ValidationExperimentInput) {
     evidence_type: input.evidence_type,
     decision_type: input.decision_type,
     request_id: input.request_id,
+    evidence_provenance: input.evidence_provenance,
+    source_urls: input.source_urls,
   };
 }
 

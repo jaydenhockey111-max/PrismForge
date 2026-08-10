@@ -49,6 +49,8 @@ export const validationExperimentInputSchema = z.object({
   evidence_type: z.enum(validationEvidenceTypes).optional().default("other"),
   decision_type: z.string().trim().max(80).nullable().optional().default(null),
   request_id: z.string().uuid().nullable().optional().default(null),
+  evidence_provenance: z.enum(["founder_reported", "secondary_research", "ai_secondary_research"]).nullable().optional().default("founder_reported"),
+  source_urls: z.array(z.string().url()).max(12).optional().default([]),
 });
 
 export type ValidationExperimentInput = z.infer<typeof validationExperimentInputSchema>;
@@ -140,6 +142,8 @@ export function starterExperimentTemplate(targetAudience: string, painPoint: str
     evidence_type: "other",
     decision_type: null,
     request_id: null,
+    evidence_provenance: "founder_reported",
+    source_urls: [],
   } satisfies ValidationExperimentInput;
 }
 

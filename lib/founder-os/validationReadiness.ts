@@ -1,4 +1,4 @@
-import type { ProjectOutput, ProjectValidationExperiment } from "@/lib/database.types";
+import type { ProjectAssumption, ProjectDecision, ProjectOutput, ProjectValidationExperiment } from "@/lib/database.types";
 import { createProjectContext, type ProjectContext, type ProjectType } from "@/lib/founder-os/projectContext";
 import type { OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
 import type { ProofSummary } from "@/lib/proof-board";
@@ -47,6 +47,8 @@ export type ValidationRoutingInput = {
   proof?: ProofSummary | null;
   preference?: FounderValidationPreference | null;
   experiments?: Array<Partial<ProjectValidationExperiment>>;
+  assumptions?: Array<Pick<ProjectAssumption, "assumption_key" | "status" | "statement">>;
+  decisions?: Array<Pick<ProjectDecision, "decision_type" | "outcome" | "rationale" | "evidence_summary">>;
   outputs?: Array<Pick<ProjectOutput, "output_type">>;
   pathHistory?: ValidationPathHistoryInput[];
   forcedPath?: ValidationPathType;
@@ -72,6 +74,11 @@ export type ValidationRoutingResult = {
   avoidanceGuard: string | null;
   suggestedStage: ProjectStatus;
   blockers: ValidationBlocker[];
+  decision: {
+    reason: "missing_context" | "contradictory_evidence" | "inconclusive_result" | "unresolved_assumption" | "stage_requirement" | "dependency" | "founder_decision";
+    factors: string[];
+    avoidsRepeating: boolean;
+  };
   starterExperiment: { title: string; goal: string; channel: "DMs" | "interviews" | "survey" | "landing page" | "TikTok" | "Reddit" | "school" | "email" | "other"; hypothesis: string; taskDescription: string; evidenceType: ValidationEvidenceType };
   // Compatibility fields for existing UI while the richer model is adopted.
   action: string;
@@ -83,7 +90,9 @@ export function routeValidationPath(input: ValidationRoutingInput): ValidationRo
   const proof = input.proof ?? emptyProof();
   const context = createProjectContext({ report: input.report, status: input.status, proof });
   const state = assessState(input, context, proof);
-  const recommended = input.forcedPath ?? choosePath(input, context, state);
+  // An active path normally remains stable while the founder carries it out. Contradictory
+  // evidence is an exception: it invalidates the premise of the active path and must win.
+  const recommended = input.forcedPath && !requiresPathRecalculation(state) ? input.forcedPath : choosePath(input, context, state);
   const path = describePath(recommended, context, state);
   const alternatives = alternativeTypes(recommended, context, state)
     .map((pathType) => describeAlternative(pathType, context, state))
@@ -92,6 +101,7 @@ export function routeValidationPath(input: ValidationRoutingInput): ValidationRo
   const avoidanceGuard = avoidanceMessage(input, state);
   const suggestedStage = suggestProjectStage(input.status, state);
   const blockers = deriveValidationBlockers(context, state, recommended);
+  const decision = decisionSummary(recommended, state, input.status);
   return {
     key: recommended,
     pathType: recommended,
@@ -102,19 +112,25 @@ export function routeValidationPath(input: ValidationRoutingInput): ValidationRo
     avoidanceGuard,
     suggestedStage,
     blockers,
+    decision,
     action: path.firstAction.action,
     why: path.rationale,
     href: path.firstAction.href,
   };
 }
 
-export function selectValidationPath(input: Pick<ValidationRoutingInput, "report" | "status" | "proof" | "preference" | "experiments" | "outputs" | "pathHistory">) {
+export function selectValidationPath(input: Pick<ValidationRoutingInput, "report" | "status" | "proof" | "preference" | "experiments" | "assumptions" | "decisions" | "outputs" | "pathHistory">) {
   return routeValidationPath(input);
 }
 
 function choosePath(input: ValidationRoutingInput, context: ProjectContext, state: RoutingState): ValidationPathType {
   if (!state.clearAudience || !state.clearProblem || !state.hasMvp) return "project_clarification";
   if (input.status === "launched") return "post_launch_learning";
+  if (state.problemContradicted) return "customer_discovery";
+  if (state.demandContradicted) return state.hasLandingArtifact ? "landing_page_test" : "waitlist_test";
+  if (state.pricingFollowUpRequired) return "pricing_test";
+  if (state.latestDecisionType === "test_pricing" && state.problemSupported && !state.pricingSignal) return "pricing_test";
+  if (state.latestDecisionType === "build_prototype" && state.problemSupported && !state.solutionFeedback) return "prototype_test";
   if (state.repeatedPreparation && !state.hasExternalEvidence) return externalPathFor(context.projectType, state);
   if (context.projectType === "Marketplace") return state.hasSupplyEvidence ? "marketplace_demand_test" : "marketplace_supply_test";
   if (isPhysical(context.projectType) && !state.hasPhysicalFeedback) return "physical_product_test";
@@ -132,8 +148,9 @@ function choosePath(input: ValidationRoutingInput, context: ProjectContext, stat
   if (input.preference === "test_pricing" && state.problemSupported) return "pricing_test";
   if (input.preference === "prepare_to_launch" && state.problemSupported && state.demandSignal) return "launch_readiness";
 
-  if (!state.hasExternalEvidence) return state.privateResearchCount < 1 && context.founder.riskTolerance <= 5 ? "private_research" : "customer_discovery";
+  if (!state.hasExternalEvidence) return "customer_discovery";
   if (!state.problemSupported) return "customer_discovery";
+  if (input.status === "building" && state.pricingSignal) return "launch_readiness";
   if (!state.solutionFeedback && input.status === "building") return "prototype_test";
   if (!state.demandSignal) return state.hasLandingArtifact ? "landing_page_test" : "waitlist_test";
   if (!state.pricingSignal) return "pricing_test";
@@ -159,7 +176,7 @@ function describePath(pathType: ValidationPathType, context: ProjectContext, sta
   const user = context.language.userNoun;
   const product = context.language.productNoun;
   const problem = context.problem;
-  const configs: Record<ValidationPathType, Omit<ValidationRoutingResult, "key" | "pathType" | "alternatives" | "progress" | "complete" | "avoidanceGuard" | "suggestedStage" | "blockers" | "action" | "why" | "href">> = {
+  const configs: Record<ValidationPathType, Omit<ValidationRoutingResult, "key" | "pathType" | "alternatives" | "progress" | "complete" | "avoidanceGuard" | "suggestedStage" | "blockers" | "decision" | "action" | "why" | "href">> = {
     project_clarification: pathConfig("Clarify the Project", "Needs a clearer problem first", "problem_exists", `Whether ${context.audience} experience one specific, recognizable problem.`, "other", "The audience, problem, or smallest test is not yet specific enough for useful evidence.", "The audience, problem, desired outcome, and smallest test are stated plainly.", "Record the missing project fundamentals and choose one primary assumption.", state.clearProblem ? "private_research" : "customer_discovery", action("Write one sentence naming the specific audience, painful moment, and desired outcome.", "Clear language prevents wasted research and awkward tests.", "A stranger could identify who the project is for and what painful moment it addresses.", "No external evidence yet; save the clarified assumption.", "Move to one short research or external test.", "?section=project", "15-25 minutes"), starter("Clarify the main assumption", "Separate the problem from the proposed solution.", "other", `The intended ${user} experience ${problem}.`, "Write the audience, painful moment, desired outcome, and one assumption to test.", "other")),
     private_research: pathConfig("Review Existing Alternatives", "Private preparation before an external test", "problem_exists", `Repeated public examples of ${user} dealing with ${problem}.`, "research_pattern", "A short private research step fits because it can sharpen user language without forcing public outreach today.", "At least three sources and one repeated pattern or contradiction are recorded with a next decision.", "Save source references, the repeated language, and what question remains unresolved.", "customer_discovery", action("Review three public discussions, reviews, or workflows and record one repeated problem pattern.", "This makes later questions more specific while keeping the first step private.", "Three source references and one repeated pattern or contradiction are saved.", "Research pattern, source type, and the unresolved question.", "Move to a customer, prototype, pilot, or demand test.", "?section=validate#proof-board", "30-45 minutes"), starter("Private research pattern review", "Understand existing behavior before asking people directly.", "other", `Public discussions will show repeated language about ${problem}.`, "Review three sources, record references, and summarize one repeated pattern or contradiction.", "research_pattern")),
     customer_discovery: pathConfig("Talk to Potential Users", "Ready to gather problem evidence", "problem_priority", `Whether ${user} experience the problem often enough to act.`, "problem_interview", `The audience and problem are clear enough to ask useful questions of real ${user}.`, `Record ${state.contactTarget} relevant conversations or replies, one repeated learning, and a decision.`, "Save contact count, concise learning, repeated pattern, and next decision in Proof Board.", "prototype_test", action(`Ask ${state.contactTarget} ${user} how they handle ${lower(problem)} today.`, "Current behavior and repeated pain are more useful than compliments about the idea.", `${state.contactTarget} relevant contacts or conversations and one repeated learning are recorded.`, "Problem interview, quote or pattern, and contradictions.", "Decide whether to narrow, prototype, pause, or test demand.", "?section=validate#proof-board", state.contactTarget <= 3 ? "45-90 minutes" : "1-2 hours this week"), starter("Problem discovery conversations", "Learn how the intended audience handles the problem today.", "interviews", `${context.audience} experience ${problem} often enough to seek a better approach.`, `Ask ${state.contactTarget} ${user} about current behavior before describing the solution.`, "problem_interview")),
@@ -175,7 +192,38 @@ function describePath(pathType: ValidationPathType, context: ProjectContext, sta
     launch_readiness: pathConfig("Prepare to Launch", "Evidence exists; real launch blockers are next", "launch_reliable", `Whether the smallest ${context.language.releaseNoun} works reliably for initial users.`, "launch_check", "The project has enough evidence to focus on specific reliability and first-user blockers.", "The core flow, account or delivery path, feedback route, and first acquisition step are checked with factual results.", "Resolve the highest real blocker and record the test result; checklist clicks alone are not evidence.", "post_launch_learning", action(`Test the complete core ${context.language.releaseNoun} flow once as a real user.`, "A small launch only helps if the core experience works and feedback can be collected.", "The core flow result and any launch-blocking failure are recorded.", "Launch check, failure or success, and resolution decision.", "Invite a small group only after the blocker is resolved.", "?section=launch#launch-command-center", "45-90 minutes"), starter("Core launch-flow check", "Test the smallest complete user or delivery flow.", "other", `The core ${context.language.releaseNoun} flow can be completed without a launch-blocking failure.`, "Run the complete core flow, record the result, and capture any real blocker and resolution.", "launch_check")),
     post_launch_learning: pathConfig("Learn From Early Users", "The project is launched; activation and retention matter now", "retention", `Whether early ${user} activate, return, and receive the intended value.`, "post_launch_feedback", "Pre-launch tasks are no longer the main priority; the next useful evidence is actual usage and feedback.", "Activation or delivery result, repeat behavior, feedback, and one improvement decision are recorded.", "Review one early-user outcome and choose one retention or reliability improvement.", "post_launch_learning", action(`Review how the first ${user} reached—or failed to reach—the core outcome.`, "Early usage and support evidence should now guide changes.", "One activation or delivery result and one evidence-based improvement decision are recorded.", "Activation, usage, repeat behavior, support issue, or retention feedback.", "Improve one bottleneck and measure again.", "?section=validate#proof-board", "30-60 minutes"), starter("Early-user learning review", "Learn from activation, repeat behavior, and support evidence.", "interviews", `${user} can reach the intended outcome and have a reason to return.`, "Review one early-user outcome, record friction or success, and choose one improvement.", "post_launch_feedback")),
   };
-  return configs[pathType];
+  const base = configs[pathType];
+  if (pathType === "pricing_test" && state.pricingFollowUpRequired) {
+    return {
+      ...base,
+      title: "Investigate the Pricing Result",
+      readiness: "The previous price test needs interpretation before another ask",
+      rationale: "The last recorded price test produced no payment-intent or revenue signal. Repeating the same ask would add little; first identify the objection or change one test variable.",
+      completionRequirement: "Record the prior price, audience, response pattern, and one changed variable for the follow-up test.",
+      nextPathHint: "pricing_test",
+      firstAction: action("Review the last pricing result and choose one concrete variable to change before retesting.", "This follows up on a recorded zero-result instead of repeating the same pricing test.", "The prior price, response pattern, and one changed variable are recorded.", "The objection or limitation, changed variable, and next price-test method.", "Run a meaningfully different pricing test or revise the offer.", "?section=validate#proof-board", "20-40 minutes"),
+      starterExperiment: starter("Pricing-result follow-up", "Learn why the prior price test did not create a commitment.", "interviews", `${user} will explain the main objection to the prior price or offer.`, "Review the prior result, identify one objection or limitation, change one variable, and record the follow-up method.", "pricing_response"),
+    };
+  }
+  if (pathType === "customer_discovery" && state.problemContradicted) {
+    return {
+      ...base,
+      title: "Resolve Conflicting Problem Evidence",
+      readiness: "Existing evidence conflicts with the current problem assumption",
+      rationale: "Recorded evidence conflicts with the current problem assumption. The next move is to understand the disagreement, not treat the problem as validated or repeat a generic interview loop.",
+      firstAction: action(`Follow up with ${state.contactTarget} ${user} to compare the assumed problem with what they actually do today.`, "The conflicting result needs a targeted comparison of the assumption and real behavior.", `${state.contactTarget} follow-ups, the conflicting pattern, and a decision to narrow, revise, or pause are recorded.`, "Contradictory examples, current behavior, and the resulting decision.", "Revise the assumption or choose the next evidence test.", "?section=validate#proof-board", state.contactTarget <= 3 ? "45-90 minutes" : "1-2 hours this week"),
+    };
+  }
+  if ((pathType === "landing_page_test" || pathType === "waitlist_test") && state.demandFollowUpRequired) {
+    return {
+      ...base,
+      title: "Investigate the Demand Result",
+      readiness: "The previous demand test was inconclusive or produced no commitment",
+      rationale: "The last demand test did not produce a commitment signal. Before advancing to pricing, PrismForge needs a meaningfully different message, audience, channel, or ask.",
+      firstAction: action("Review the last demand test and change one concrete variable before running the follow-up.", "A changed test can explain the weak result; repeating the same message and audience cannot.", "The prior result, one changed variable, and the follow-up outcome are recorded.", "Prior reach, response, changed variable, and resulting commitment signal.", "Keep testing demand, narrow the audience, or move to pricing only after a real commitment signal.", "?section=validate#proof-board", "20-40 minutes"),
+    };
+  }
+  return base;
 }
 
 function pathConfig(title: string, readiness: string, targetAssumptionKey: AssumptionType, targetAssumption: string, targetEvidenceType: ValidationEvidenceType, rationale: string, successCondition: string, completionRequirement: string, nextPathHint: ValidationPathType, firstAction: ValidationAction, starterExperiment: ValidationRoutingResult["starterExperiment"]): PathDescription {
@@ -192,6 +240,13 @@ function assessState(input: ValidationRoutingInput, context: ProjectContext, pro
   const outcomeExperiments = experiments.filter(hasRecordedOutcome);
   const evidenceTypes = new Set(outcomeExperiments.map((row) => row.evidence_type).filter(Boolean));
   const completedTypes = new Set(outcomeExperiments.filter((row) => row.status === "completed").map((row) => row.evidence_type).filter(Boolean));
+  const zeroResultTypes = new Set(outcomeExperiments
+    .filter((row) => hasAttemptedExternalTest(row) && !hasCommitmentSignal(row))
+    .map((row) => row.evidence_type)
+    .filter(Boolean));
+  const assumptions = input.assumptions ?? [];
+  const latestDecisionType = input.decisions?.[0]?.decision_type ?? null;
+  const contradictedAssumptions = new Set(assumptions.filter((row) => row.status === "contradicted").map((row) => row.assumption_key));
   const history = input.pathHistory ?? [];
   const completedPrep = history.filter((row) => row.status === "completed" && ["project_clarification", "private_research", "prototype_test"].includes(row.path_type)).length;
   const hasExternalEvidence = proof.people_contacted > 0 || proof.replies > 0 || proof.pain_confirmed > 0 || proof.interested_users > 0 || proof.waitlist_signups > 0 || proof.payment_intent > 0 || proof.preorders_or_revenue_cents > 0 || [...evidenceTypes].some((value) => value && value !== "research_pattern" && value !== "other");
@@ -199,19 +254,38 @@ function assessState(input: ValidationRoutingInput, context: ProjectContext, pro
   return {
     clearAudience: hasSpecificText(input.report.summary?.targetCustomer), clearProblem: hasSpecificText(input.report.summary?.painPoint),
     hasMvp: hasAnyText(input.report.mvpPlan?.mustHaveFeatures) || hasAnyText(input.report.mvpPlan?.featureList),
-    hasExternalEvidence, problemSupported: proof.pain_confirmed >= Math.min(3, contactTarget) || (proof.replies >= 3 && proof.pain_confirmed >= 1),
+    hasExternalEvidence, problemSupported: !contradictedAssumptions.has("problem_exists") && !contradictedAssumptions.has("problem_priority") && (proof.pain_confirmed >= Math.min(3, contactTarget) || (proof.replies >= 3 && proof.pain_confirmed >= 1)),
     solutionFeedback: evidenceTypes.has("prototype_feedback") || completedTypes.has("physical_product_feedback"),
-    demandSignal: proof.interested_users > 0 || proof.waitlist_signups > 0 || evidenceTypes.has("landing_page_result") || evidenceTypes.has("content_response"),
-    pricingSignal: proof.payment_intent > 0 || proof.preorders_or_revenue_cents > 0 || evidenceTypes.has("pricing_response"),
+    demandSignal: !contradictedAssumptions.has("demand_exists") && !contradictedAssumptions.has("behavior_change") && (proof.interested_users > 0 || proof.waitlist_signups > 0 || proof.payment_intent > 0 || proof.preorders_or_revenue_cents > 0),
+    pricingSignal: !contradictedAssumptions.has("willingness_to_pay") && (proof.payment_intent > 0 || proof.preorders_or_revenue_cents > 0),
     hasSupplyEvidence: evidenceTypes.has("marketplace_supply_response"), hasDemandEvidence: evidenceTypes.has("marketplace_demand_response"),
     hasPhysicalFeedback: evidenceTypes.has("physical_product_feedback"), hasPilotEvidence: evidenceTypes.has("service_pilot_response"), hasContentEvidence: evidenceTypes.has("content_response"),
     hasLandingArtifact: (input.outputs ?? []).some((row) => row.output_type === "landing_page_copy") || evidenceTypes.has("landing_page_result"),
     contradictory: proof.replies >= 3 && proof.pain_confirmed === 0,
+    problemContradicted: contradictedAssumptions.has("problem_exists") || contradictedAssumptions.has("problem_priority") || (proof.replies >= 3 && proof.pain_confirmed === 0),
+    demandContradicted: contradictedAssumptions.has("demand_exists") || contradictedAssumptions.has("behavior_change"),
+    pricingFollowUpRequired: zeroResultTypes.has("pricing_response") && proof.payment_intent === 0 && proof.preorders_or_revenue_cents === 0,
+    demandFollowUpRequired: (zeroResultTypes.has("landing_page_result") || zeroResultTypes.has("waitlist_signup") || zeroResultTypes.has("content_response")) && proof.interested_users === 0 && proof.waitlist_signups === 0 && proof.payment_intent === 0 && proof.preorders_or_revenue_cents === 0,
     privateResearchCount: history.filter((row) => row.path_type === "private_research" && row.status === "completed").length,
     clarificationCount: history.filter((row) => row.path_type === "project_clarification" && row.status === "completed").length,
     repeatedPreparation: completedPrep >= 3,
-    contactTarget, proof, experiments, evidenceTypes, completedTypes,
+    contactTarget, proof, experiments, evidenceTypes, completedTypes, zeroResultTypes, latestDecisionType,
   };
+}
+
+function hasAttemptedExternalTest(experiment: Partial<ProjectValidationExperiment>) {
+  return hasRecordedOutcome(experiment) && Number(experiment.people_contacted ?? 0) > 0;
+}
+
+function hasCommitmentSignal(experiment: Partial<ProjectValidationExperiment>) {
+  return Number(experiment.interested_users ?? 0) > 0
+    || Number(experiment.waitlist_signups ?? 0) > 0
+    || Number(experiment.payment_intent ?? 0) > 0
+    || Number(experiment.preorders_or_revenue_cents ?? 0) > 0;
+}
+
+function requiresPathRecalculation(state: RoutingState) {
+  return state.problemContradicted || state.demandContradicted;
 }
 
 export function hasRecordedOutcome(experiment: Partial<ProjectValidationExperiment>) {
@@ -276,6 +350,17 @@ function deriveValidationBlockers(context: ProjectContext, state: RoutingState, 
 function blocker(id: string, label: string, source: ValidationBlocker["source"], resolutionCondition: string, href: string): ValidationBlocker { return { id, label, source, resolutionCondition, href }; }
 
 function avoidanceMessage(input: ValidationRoutingInput, state: RoutingState) { if (state.repeatedPreparation && !state.hasExternalEvidence) return "You have completed several preparation steps. The next useful information now needs to come from outside the project."; if ((input.pathHistory ?? []).filter((row) => row.status === "replaced").length >= 2 && !state.hasExternalEvidence) return "Several paths have been changed without new evidence. PrismForge is keeping the next step small, but it still needs an external result."; return null; }
+function decisionSummary(pathType: ValidationPathType, state: RoutingState, status: ProjectStatus): ValidationRoutingResult["decision"] {
+  if (!state.clearAudience || !state.clearProblem || !state.hasMvp) return { reason: "missing_context", factors: ["The audience, problem, or smallest test is not specific enough yet."], avoidsRepeating: false };
+  if (state.problemContradicted || state.demandContradicted) return { reason: "contradictory_evidence", factors: ["Recorded evidence conflicts with a current assumption.", "The next move resolves the conflict before progressing."], avoidsRepeating: true };
+  if (state.pricingFollowUpRequired || state.demandFollowUpRequired) return { reason: "inconclusive_result", factors: ["A completed external test produced no commitment signal.", "The follow-up changes a concrete variable instead of repeating the prior action."], avoidsRepeating: true };
+  if (status === "launched") return { reason: "stage_requirement", factors: ["The project is launched, so observed activation and retention now outweigh pre-launch assumptions."], avoidsRepeating: false };
+  if (state.latestDecisionType === "test_pricing" && pathType === "pricing_test") return { reason: "founder_decision", factors: ["A recorded decision to test pricing is being honored because the problem-evidence prerequisite is met."], avoidsRepeating: false };
+  if (state.latestDecisionType === "build_prototype" && pathType === "prototype_test") return { reason: "founder_decision", factors: ["A recorded decision to test a prototype is being honored because the problem-evidence prerequisite is met."], avoidsRepeating: false };
+  if (pathType === "pricing_test" && !state.pricingSignal) return { reason: "unresolved_assumption", factors: ["Problem and demand evidence exist, while willingness to pay remains unresolved."], avoidsRepeating: false };
+  if (pathType === "launch_readiness") return { reason: "dependency", factors: ["The earlier evidence gates are met; the next dependency is the smallest reliable user flow."], avoidsRepeating: false };
+  return { reason: "unresolved_assumption", factors: ["This path targets the highest-priority unresolved assumption supported by the saved project state."], avoidsRepeating: false };
+}
 function suggestProjectStage(current: ProjectStatus, state: RoutingState): ProjectStatus { if (current === "launched") return "launched"; if (state.pricingSignal || state.solutionFeedback) return "building"; if (state.hasExternalEvidence) return "validating"; return "idea"; }
 function externalPathFor(projectType: ProjectType, state: RoutingState): ValidationPathType { if (projectType === "Marketplace") return state.hasSupplyEvidence ? "marketplace_demand_test" : "marketplace_supply_test"; if (isService(projectType)) return "service_pilot"; if (isCreator(projectType)) return "content_test"; if (isPhysical(projectType)) return "physical_product_test"; return "customer_discovery"; }
 function isService(type: ProjectType) { return ["Agency", "Consulting", "Local Business", "Coaching"].includes(type); }

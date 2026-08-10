@@ -11,7 +11,7 @@ export type Profile = {
   occupation: string | null;
   interests: string[];
   role: "user" | "admin";
-  plan: "free" | "premium";
+  plan: "free" | "premium" | "founder";
   beta_access_until: string | null;
   lifetime_founder: boolean;
   beta_feedback_completed: boolean;
@@ -155,6 +155,29 @@ export type ProjectValidationExperiment = {
   evidence_type: string;
   decision_type: string | null;
   request_id: string | null;
+  evidence_provenance: "founder_reported" | "secondary_research" | "ai_secondary_research" | null;
+  source_urls: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketResearchExecution = {
+  id: string;
+  user_id: string;
+  project_id: string;
+  request_id: string;
+  reservation_id: string;
+  workflow_run_id: string | null;
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  execution_type: "market_research";
+  route_key: string;
+  target_assumption_key: string;
+  validation_path_id: string | null;
+  target_assumption_id: string | null;
+  result_json: Json | null;
+  failure_reason: string | null;
+  started_at: string | null;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -634,6 +657,7 @@ export type Database = {
       deleted_project_tombstones: { Row: DeletedProjectTombstone; Insert: Partial<DeletedProjectTombstone> & Pick<DeletedProjectTombstone, "project_id" | "user_id">; Update: never; Relationships: [] };
       project_outputs: { Row: ProjectOutput; Insert: Partial<ProjectOutput> & Pick<ProjectOutput, "project_id" | "user_id" | "output_type" | "content_json">; Update: Partial<ProjectOutput>; Relationships: [] };
       project_validation_experiments: { Row: ProjectValidationExperiment; Insert: Partial<ProjectValidationExperiment> & Pick<ProjectValidationExperiment, "project_id" | "user_id" | "title">; Update: Partial<ProjectValidationExperiment>; Relationships: [] };
+      market_research_executions: { Row: MarketResearchExecution; Insert: Partial<MarketResearchExecution> & Pick<MarketResearchExecution, "project_id" | "user_id" | "request_id" | "reservation_id" | "route_key" | "target_assumption_key">; Update: Partial<MarketResearchExecution>; Relationships: [] };
       founder_validation_preferences: { Row: FounderValidationPreferenceRow; Insert: Partial<FounderValidationPreferenceRow> & Pick<FounderValidationPreferenceRow, "user_id" | "project_id" | "preference">; Update: Partial<FounderValidationPreferenceRow>; Relationships: [] };
       validation_paths: { Row: ValidationPathRow; Insert: Partial<ValidationPathRow> & Pick<ValidationPathRow, "user_id" | "project_id" | "path_type" | "target_assumption_key" | "target_evidence_type" | "rationale" | "success_condition" | "completion_requirement">; Update: Partial<ValidationPathRow>; Relationships: [] };
       validation_path_events: { Row: ValidationPathEvent; Insert: Partial<ValidationPathEvent> & Pick<ValidationPathEvent, "user_id" | "project_id" | "event_type" | "request_id">; Update: never; Relationships: [] };

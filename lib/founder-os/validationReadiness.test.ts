@@ -13,6 +13,12 @@ function route(input: { businessType?: BusinessType; idea?: string; preference?:
 }
 
 describe("flexible validation routing", () => {
+  it("starts a well-defined new project with its highest-value problem test", () => {
+    const result = route();
+    expect(result.pathType).toBe("customer_discovery");
+    expect(result.decision.reason).toBe("unresolved_assumption");
+  });
+
   it("does not treat a planned experiment or AI-written hypothesis as evidence", () => {
     const planned = {
       status: "planned" as const,
@@ -67,6 +73,75 @@ describe("flexible validation routing", () => {
     expect(route({ preference: "test_pricing" }).pathType).not.toBe("pricing_test");
     const proof = { ...emptyProof, people_contacted: 5, replies: 3, pain_confirmed: 2, experiment_count: 1, confidence_score: 50, confidence_label: "Promising signal" as const };
     expect(route({ preference: "test_pricing", proof }).pathType).toBe("pricing_test");
+  });
+
+  it("moves from problem evidence to a demand commitment instead of repeating discovery", () => {
+    const proof = { ...emptyProof, people_contacted: 5, replies: 4, pain_confirmed: 3, experiment_count: 1 };
+    const result = route({ proof });
+    expect(result.pathType).toBe("waitlist_test");
+    expect(result.firstAction.action).not.toContain("how they handle");
+  });
+
+  it("moves from a demand commitment to willingness-to-pay evidence", () => {
+    const proof = { ...emptyProof, people_contacted: 5, replies: 4, pain_confirmed: 3, waitlist_signups: 2, experiment_count: 2 };
+    const result = route({ proof });
+    expect(result.pathType).toBe("pricing_test");
+    expect(result.decision.factors.join(" ")).toContain("willingness to pay");
+  });
+
+  it("honors a recorded pricing decision only after its evidence prerequisite is met", () => {
+    const proof = { ...emptyProof, people_contacted: 5, replies: 4, pain_confirmed: 3, experiment_count: 1 };
+    const result = routeValidationPath({ report: report(), status: "validating", proof, decisions: [{ decision_type: "test_pricing", outcome: null, rationale: "Test the price with people who described this problem.", evidence_summary: null }] });
+    expect(result.pathType).toBe("pricing_test");
+    expect(result.decision.reason).toBe("founder_decision");
+  });
+
+  it("investigates a failed pricing test instead of repeating the same price ask", () => {
+    const proof = { ...emptyProof, people_contacted: 8, replies: 4, pain_confirmed: 3, waitlist_signups: 2, experiment_count: 3 };
+    const result = route({ proof, experiments: [{ status: "completed", evidence_type: "pricing_response", people_contacted: 3, replies: 2, learnings: "Prospects declined at the stated price." }] });
+    expect(result.pathType).toBe("pricing_test");
+    expect(result.title).toBe("Investigate the Pricing Result");
+    expect(result.firstAction.action).toContain("change before retesting");
+    expect(result.decision.avoidsRepeating).toBe(true);
+  });
+
+  it("resolves a contradicted assumption before progressing", () => {
+    const proof = { ...emptyProof, people_contacted: 6, replies: 4, pain_confirmed: 3, waitlist_signups: 2, experiment_count: 2 };
+    const result = routeValidationPath({ report: report(), status: "validating", proof, assumptions: [{ assumption_key: "demand_exists", status: "contradicted", statement: "Students will request access." }] });
+    expect(result.pathType).toBe("waitlist_test");
+    expect(result.decision.reason).toBe("contradictory_evidence");
+  });
+
+  it("does not let an active path override contradictory evidence", () => {
+    const proof = { ...emptyProof, people_contacted: 6, replies: 4, pain_confirmed: 3, waitlist_signups: 2, experiment_count: 2 };
+    const result = routeValidationPath({ report: report(), status: "validating", proof, forcedPath: "pricing_test", assumptions: [{ assumption_key: "demand_exists", status: "contradicted", statement: "Students will request access." }] });
+    expect(result.pathType).toBe("waitlist_test");
+  });
+
+  it("uses a changed follow-up after an inconclusive demand test", () => {
+    const proof = { ...emptyProof, people_contacted: 5, replies: 4, pain_confirmed: 3, experiment_count: 2 };
+    const result = route({ proof, experiments: [{ status: "completed", evidence_type: "waitlist_signup", people_contacted: 4, replies: 1, learnings: "No one signed up." }] });
+    expect(result.pathType).toBe("waitlist_test");
+    expect(result.title).toBe("Investigate the Demand Result");
+    expect(result.firstAction.action).toContain("change one concrete variable");
+  });
+
+  it("allows a project with payment evidence to progress to launch readiness", () => {
+    const proof = { ...emptyProof, people_contacted: 8, replies: 5, pain_confirmed: 4, waitlist_signups: 2, payment_intent: 1, experiment_count: 3 };
+    expect(route({ status: "building", proof }).pathType).toBe("launch_readiness");
+  });
+
+  it("does not repeat completed discovery when its evidence already supports the problem", () => {
+    const proof = { ...emptyProof, people_contacted: 5, replies: 4, pain_confirmed: 3, experiment_count: 1 };
+    const result = route({ proof, experiments: [{ status: "completed", evidence_type: "problem_interview", people_contacted: 5, replies: 4, pain_confirmed: 3, learnings: "The same workflow problem appeared repeatedly." }] });
+    expect(result.pathType).toBe("waitlist_test");
+  });
+
+  it("keeps sparse project context in an honest clarification fallback", () => {
+    const sparse = report(); sparse.summary.targetCustomer = "users"; sparse.summary.painPoint = "not sure"; sparse.mvpPlan.mustHaveFeatures = [];
+    const result = routeValidationPath({ report: sparse, status: "idea", proof: emptyProof });
+    expect(result.pathType).toBe("project_clarification");
+    expect(result.decision.reason).toBe("missing_context");
   });
 
   it("moves launched projects to post-launch learning", () => {

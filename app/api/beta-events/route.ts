@@ -53,6 +53,10 @@ const allowedClientEvents = new Set<BetaEventName>([
   "core_loop_feedback_dismissed",
   "core_loop_error_viewed",
   "next_move_help_opened",
+  "help_me_do_it_opened",
+  "support_type_selected",
+  "artifact_copied",
+  "evidence_handoff_started",
   "payment_signal_recorded",
   "case_study_permission_recorded",
 ]);

@@ -237,10 +237,22 @@ export type BetaEventName =
   | "core_loop_error_viewed"
   | "next_move_viewed"
   | "next_move_help_opened"
+  | "help_me_do_it_opened"
+  | "support_type_selected"
+  | "artifact_copied"
+  | "evidence_handoff_started"
   | "next_move_outcome_recorded"
   | "next_move_recalculated"
   | "payment_signal_recorded"
-  | "case_study_permission_recorded";
+  | "case_study_permission_recorded"
+  | "do_it_for_me_shown"
+  | "do_it_for_me_started"
+  | "execution_preflight_rejected"
+  | "execution_started"
+  | "execution_completed"
+  | "execution_failed"
+  | "research_result_viewed"
+  | "research_finding_handoff_started";
 
 export async function logBetaEvent({
   userId,

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { APP_NAME } from "@/lib/brand";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const themeBootScript = `
   (() => {
@@ -24,7 +28,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <head><script dangerouslySetInnerHTML={{ __html: themeBootScript }} /></head>
       <body className="font-sans antialiased">{children}</body>
     </html>

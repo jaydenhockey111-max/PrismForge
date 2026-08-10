@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { ClipboardCheck, Pencil, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
 import {
   createValidationExperiment,
@@ -49,6 +50,8 @@ const emptyForm: FormState = {
   evidence_type: "other",
   decision_type: null,
   request_id: null,
+  evidence_provenance: "founder_reported",
+  source_urls: [],
   revenue_dollars: "",
 };
 
@@ -73,7 +76,7 @@ export function ProofBoard({
   const [experiments, setExperiments] = useState<ProjectValidationExperiment[]>(initialExperiments);
   const [form, setForm] = useState<FormState>(() => ({ ...emptyForm, target_audience: targetAudience, validation_path_id: activePathId ?? null, target_assumption_id: targetAssumptionId ?? null }));
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(initialExperiments.length === 0);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -85,6 +88,19 @@ export function ProofBoard({
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("prismforge:proof-summary-updated", { detail: { projectId, summary } }));
   }, [projectId, summary]);
+
+  useEffect(() => {
+    function openPreparedExperiment() {
+      void trackEvidenceStart(projectId, "starter");
+      setEditingId(null);
+      setForm({ ...emptyForm, ...starter, revenue_dollars: centsToDollars(starter.preorders_or_revenue_cents) });
+      setIsFormOpen(true);
+      setMessage("");
+      setError("");
+    }
+    window.addEventListener("prismforge:open-proof-starter", openPreparedExperiment);
+    return () => window.removeEventListener("prismforge:open-proof-starter", openPreparedExperiment);
+  }, [projectId, starter]);
 
   function updateField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -123,11 +139,11 @@ export function ProofBoard({
         if (editingId) {
           const updated = await updateValidationExperiment(editingId, payload);
           setExperiments((current) => current.map((item) => (item.id === updated.id ? updated as ProjectValidationExperiment : item)));
-          setMessage("Validation experiment updated.");
+          setMessage("Evidence updated. Your Next Move now reflects the latest result.");
         } else {
           const created = await createValidationExperiment(projectId, payload);
           setExperiments((current) => [created as ProjectValidationExperiment, ...current]);
-          setMessage("Validation experiment saved.");
+          setMessage("Evidence saved. Your Next Move now reflects the latest result.");
         }
         resetForm();
         router.refresh();
@@ -193,7 +209,9 @@ export function ProofBoard({
         </div>
 
         <div className="grid gap-5">
-          {message && <p role="status" className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</p>}
+          <AnimatePresence initial={false}>
+            {message && <motion.p key={message} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} role="status" className="rounded-2xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{message}</motion.p>}
+          </AnimatePresence>
           {error && <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">{error}</p>}
 
           {isFormOpen && (
@@ -484,6 +502,8 @@ function rowToForm(experiment: ProjectValidationExperiment): FormState {
     evidence_type: experiment.evidence_type as FormState["evidence_type"],
     decision_type: experiment.decision_type,
     request_id: experiment.request_id,
+    evidence_provenance: experiment.evidence_provenance ?? "founder_reported",
+    source_urls: experiment.source_urls ?? [],
     revenue_dollars: centsToDollars(experiment.preorders_or_revenue_cents),
   };
 }
@@ -513,6 +533,8 @@ function formToPayload(form: FormState): ValidationExperimentInput {
     evidence_type: form.evidence_type,
     decision_type: form.decision_type,
     request_id: form.request_id,
+    evidence_provenance: form.evidence_provenance,
+    source_urls: form.source_urls,
   };
 }
 

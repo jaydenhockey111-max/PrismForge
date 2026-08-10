@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
 import { requireProfile } from "@/lib/auth";
-import type { ProjectDecision, ProjectOutput, ProjectValidationExperiment, ValidationPathRow } from "@/lib/database.types";
+import type { ProjectAssumption, ProjectDecision, ProjectOutput, ProjectValidationExperiment, ValidationPathRow } from "@/lib/database.types";
 import { BUSINESS_TYPE_LABELS } from "@/lib/founder-os/helpers";
 import { buildNextMove } from "@/lib/founder-os/nextMove";
 import type { BusinessType, OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
@@ -167,9 +167,10 @@ async function getFocusedNextMove(db: any, userId: string, project: any, issues:
   const report = project.report_json as OpportunityReport;
   if (!report?.input || !report?.summary || !report?.mvpPlan) return null;
 
-  const [experiments, decisions, preference, paths, outputs] = await Promise.all([
+  const [experiments, decisions, assumptions, preference, paths, outputs] = await Promise.all([
     safeRows(db.from("project_validation_experiments").select("*").eq("user_id", userId).eq("project_id", project.id).order("updated_at", { ascending: false }), issues),
     safeRows(db.from("project_decisions").select("*").eq("user_id", userId).eq("project_id", project.id).order("created_at", { ascending: false }).limit(25), issues),
+    safeRows(db.from("project_assumptions").select("assumption_key,status,statement").eq("user_id", userId).eq("project_id", project.id), issues),
     safeMaybeSingle<any>(db.from("founder_validation_preferences").select("preference").eq("user_id", userId).eq("project_id", project.id).maybeSingle(), issues),
     safeRows(db.from("validation_paths").select("*").eq("user_id", userId).eq("project_id", project.id).order("created_at", { ascending: false }), issues),
     safeRows(db.from("project_outputs").select("output_type").eq("user_id", userId).eq("project_id", project.id), issues),
@@ -183,6 +184,8 @@ async function getFocusedNextMove(db: any, userId: string, project: any, issues:
     proof: summarizeProof(proofRows),
     preference: (preference?.preference ?? null) as FounderValidationPreference | null,
     experiments: proofRows,
+    assumptions: assumptions as Pick<ProjectAssumption, "assumption_key" | "status" | "statement">[],
+    decisions: decisions as ProjectDecision[],
     outputs: outputs as ProjectOutput[],
     pathHistory: history.map((path) => ({ path_type: path.path_type, status: path.status, source: path.source, created_at: path.created_at })) as ValidationPathHistoryInput[],
     forcedPath: active?.path_type as ValidationRoutingResult["pathType"] | undefined,

@@ -41,24 +41,30 @@ export async function getValidationWorkspace(input: {
   const persistenceReady = !preferenceResult.error && !pathsResult.error && !assumptionsResult.error && !decisionsResult.error;
   const preference = (preferenceResult.data?.preference ?? null) as FounderValidationPreference | null;
   const history = (pathsResult.data ?? []) as ValidationPathRow[];
+  let assumptions = (assumptionsResult.data ?? []) as ProjectAssumption[];
+  const decisions = (decisionsResult.data ?? []) as ProjectDecision[];
   const active = history.find((path) => path.status === "active") ?? null;
   const pathHistory = history.map((path) => ({ path_type: path.path_type, status: path.status, source: path.source, created_at: path.created_at })) as ValidationPathHistoryInput[];
-  let route = routeValidationPath({ report: input.report, status: input.status, proof: input.proof, preference, experiments: input.experiments, outputs: input.outputs, pathHistory, forcedPath: active?.path_type as ValidationRoutingResult["pathType"] | undefined });
+  let route = routeValidationPath({ report: input.report, status: input.status, proof: input.proof, preference, experiments: input.experiments, assumptions, decisions, outputs: input.outputs, pathHistory, forcedPath: active?.path_type as ValidationRoutingResult["pathType"] | undefined });
   let activePath = active;
 
   const lifecycleAllowsWork = (input.lifecycleStatus ?? "active") === "active" && !input.deletedAt;
+  if (persistenceReady && lifecycleAllowsWork && activePath && route.pathType !== activePath.path_type) {
+    await admin.from("validation_paths").update({ status: "replaced", replaced_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", activePath.id).eq("user_id", input.userId);
+    await appendPathEvent(admin, input.userId, input.projectId, activePath.id, "replaced", activePath.path_type, route.pathType, "Contradictory evidence invalidated the active path's assumption.");
+    activePath = null;
+  }
   if (persistenceReady && lifecycleAllowsWork && (!activePath || route.complete)) {
     if (activePath && route.complete) {
       await admin.from("validation_paths").update({ status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", activePath.id).eq("user_id", input.userId);
       await appendPathEvent(admin, input.userId, input.projectId, activePath.id, "completed", activePath.path_type, route.nextPathHint, "Completion requirements were met by saved proof.");
-      route = routeValidationPath({ report: input.report, status: input.status, proof: input.proof, preference, experiments: input.experiments, outputs: input.outputs, pathHistory: [...pathHistory, { path_type: route.pathType, status: "completed" }], forcedPath: route.nextPathHint });
+      route = routeValidationPath({ report: input.report, status: input.status, proof: input.proof, preference, experiments: input.experiments, assumptions, decisions, outputs: input.outputs, pathHistory: [...pathHistory, { path_type: route.pathType, status: "completed" }], forcedPath: route.nextPathHint });
     }
     const { data } = await admin.from("validation_paths").insert(pathInsert(input.userId, input.projectId, route, "system", route.complete ? "Advanced after completed evidence." : "Initial deterministic recommendation.")).select("*").maybeSingle();
     activePath = (data as ValidationPathRow | null) ?? null;
     if (activePath) await appendPathEvent(admin, input.userId, input.projectId, activePath.id, "activated", active?.path_type ?? null, route.pathType, active ? "Advanced after path completion." : "Initial path activated.");
   }
 
-  let assumptions = (assumptionsResult.data ?? []) as ProjectAssumption[];
   if (persistenceReady && lifecycleAllowsWork) {
     const { data: savedAssumption } = await admin
       .from("project_assumptions")
@@ -78,7 +84,7 @@ export async function getValidationWorkspace(input: {
     activePath,
     preference,
     assumptions,
-    decisions: (decisionsResult.data ?? []) as ProjectDecision[],
+    decisions,
     history: activePath && !history.some((row) => row.id === activePath?.id) ? [activePath, ...history] : history,
     persistenceReady,
   };

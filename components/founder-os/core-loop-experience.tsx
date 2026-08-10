@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { motion } from "motion/react";
 import { CheckCircle2, Pencil, Sparkles } from "lucide-react";
 import { updateBiggestQuestion } from "@/app/(app)/projects/validation-actions";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type FeedbackChoice = "yes" | "somewhat" | "no";
 
@@ -35,16 +39,16 @@ export function BiggestQuestionCard({
           </div>
           {editing ? (
             <div className="mt-3">
-              <label htmlFor="biggest-question" className="sr-only">Edit the biggest question to test</label>
-              <textarea id="biggest-question" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} className="min-h-28 w-full rounded-2xl border border-violet/25 bg-white p-4 text-base font-semibold leading-7 text-ink outline-none ring-violet/20 focus:ring-4" />
+              <Label htmlFor="biggest-question" className="sr-only">Edit the biggest question to test</Label>
+              <Textarea id="biggest-question" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={1000} className="min-h-28 rounded-2xl border-violet/25 p-4 font-semibold leading-7" />
               <div className="mt-3 flex flex-wrap gap-2">
-                <button disabled={pending || !assumptionId} onClick={() => startTransition(async () => {
+                <Button disabled={pending || !assumptionId} onClick={() => startTransition(async () => {
                   if (!assumptionId) return;
                   const result = await updateBiggestQuestion(projectId, assumptionId, draft, crypto.randomUUID());
                   setMessage(result.ok ? "Question saved. New evidence will be tested against this wording." : result.error);
                   if (result.ok) setEditing(false);
-                })} className="rounded-full bg-violet px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 disabled:opacity-50">{pending ? "Saving…" : "Save question"}</button>
-                <button type="button" onClick={() => { setDraft(statement); setEditing(false); setMessage(""); }} className="rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-black text-ink">Cancel</button>
+                })} className="rounded-full px-5 py-2.5 font-black">{pending ? "Saving…" : "Save question"}</Button>
+                <Button type="button" variant="secondary" onClick={() => { setDraft(statement); setEditing(false); setMessage(""); }} className="rounded-full px-5 py-2.5 font-black">Cancel</Button>
               </div>
             </div>
           ) : (
@@ -55,7 +59,7 @@ export function BiggestQuestionCard({
           {message && <p role="status" aria-live="polite" className="mt-3 text-sm font-bold text-moss">{message}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <button type="button" disabled={!assumptionId} onClick={() => setEditing(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/15 bg-white px-4 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:border-violet/40 disabled:opacity-50"><Pencil className="size-4" />Edit</button>
+          <Button type="button" variant="secondary" disabled={!assumptionId} onClick={() => setEditing(true)} className="gap-2 rounded-full px-4 font-black"><Pencil className="size-4" />Edit</Button>
         </div>
       </div>
     </section>
@@ -63,7 +67,7 @@ export function BiggestQuestionCard({
 }
 
 export function TrackedCoreActionLink({ projectId, href, children }: { projectId: string; href: string; children: React.ReactNode }) {
-  return <Link href={href} onClick={() => { void track("core_loop_next_action_started", projectId, { source: "next_move" }); void track("next_move_help_opened", projectId, { source: "next_move" }); }} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-lime px-6 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-ink">{children}</Link>;
+  return <motion.div whileTap={{ scale: 0.99 }} transition={{ duration: 0.1 }}><Button render={<Link href={href} onClick={() => { void track("core_loop_next_action_started", projectId, { source: "next_move" }); void track("next_move_help_opened", projectId, { source: "next_move" }); }} />} className="mt-6 min-h-12 rounded-full bg-lime px-6 font-black text-ink hover:bg-white hover:shadow-md focus-visible:ring-lime focus-visible:ring-offset-ink">{children}</Button></motion.div>;
 }
 
 export function CoreValueFeedback({ projectId }: { projectId: string }) {

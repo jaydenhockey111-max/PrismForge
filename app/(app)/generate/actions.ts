@@ -106,13 +106,14 @@ export async function generateFounderProject(formData: FormData) {
     if (!error && (count ?? 0) >= limits.reportsPerMonth) redirect(`/pricing?error=${encodeURIComponent(`Your current plan includes ${limits.reportsPerMonth} founder reports per month.`)}`);
   }
 
-  if (!isUnlimited(limits.savedProjects)) {
+  if (!isUnlimited(limits.activeProjects)) {
     const { count, error } = await (supabase as any)
       .from("opportunity_projects")
       .select("*", { count: "exact", head: true })
       .eq("user_id", profile.id)
-      .is("deleted_at", null);
-    if (!error && (count ?? 0) >= limits.savedProjects) redirect(`/pricing?error=${encodeURIComponent(`Your current plan includes ${limits.savedProjects} saved projects.`)}`);
+      .is("deleted_at", null)
+      .eq("lifecycle_status", "active");
+    if (!error && (count ?? 0) >= limits.activeProjects) redirect(`/pricing?error=${encodeURIComponent(`Your current plan includes ${limits.activeProjects} active project${limits.activeProjects === 1 ? "" : "s"}. Archive or complete a project, or upgrade for more active projects.`)}`);
   }
 
   let report = await createReportWithReliableFallback({ input: sanitized, userId: profile.id, requestId, startedAt, plan });

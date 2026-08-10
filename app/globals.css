@@ -279,6 +279,19 @@ html[data-theme="dark"] .via-ink {
   z-index: 1;
 }
 
+.motion-collapsible {
+  height: var(--collapsible-panel-height);
+  overflow: hidden;
+  opacity: 1;
+  transition: height .2s ease, opacity .15s ease;
+}
+
+.motion-collapsible[data-starting-style],
+.motion-collapsible[data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {

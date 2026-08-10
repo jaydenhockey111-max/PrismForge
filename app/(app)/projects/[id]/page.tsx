@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowDownToLine, ArrowLeft, CalendarDays, History } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, CalendarDays, ChevronDown, History } from "lucide-react";
 import { CompetitorTable } from "@/components/founder-os/competitor-table";
 import { ContentIdeasGrid } from "@/components/founder-os/content-ideas-grid";
 import { CopySectionButton } from "@/components/founder-os/copy-section-button";
@@ -22,9 +22,12 @@ import { RoadmapTimeline } from "@/components/founder-os/roadmap-timeline";
 import { ValueProofCard } from "@/components/founder-os/value-proof-card";
 import { HistoricalLearningReminder } from "@/components/founder-learning/historical-learning-reminder";
 import { ProjectLearningControl } from "@/components/founder-learning/project-learning-control";
+import { NextMoveMotion } from "@/components/founder-os/next-move-motion";
+import { NextMoveExecutionAssistant } from "@/components/founder-os/next-move-execution-assistant";
 import { ValidationPathWorkspace } from "@/components/founder-os/validation-path-workspace";
 import { BiggestQuestionCard, CoreValueFeedback, TrackedCoreActionLink } from "@/components/founder-os/core-loop-experience";
 import { ButtonLink } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FormMessage } from "@/components/ui/form";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
 import { requireProfile } from "@/lib/auth";
@@ -35,6 +38,9 @@ import { BUSINESS_TYPE_LABELS } from "@/lib/founder-os/helpers";
 import { opportunityReportToMarkdown } from "@/lib/founder-os/markdown";
 import { PROJECT_SECTIONS, parseProjectSection, type ProjectSection } from "@/lib/founder-os/projectNavigation";
 import { buildNextMove, type NextMove } from "@/lib/founder-os/nextMove";
+import { getEffectivePlan } from "@/lib/billing/planLimits";
+import { AUTONOMOUS_EXECUTION_ENABLED, evaluateExecutionPolicy } from "@/lib/execution/policy";
+import { latestMarketResearchExecution } from "@/lib/execution/marketResearchRepository";
 import { cleanProjectTitle } from "@/lib/founder-os/titleQuality";
 import { getValidationWorkspace } from "@/lib/founder-os/validationWorkspace.server";
 import { buildValueProofReport } from "@/lib/founder-os/valueProof";
@@ -179,6 +185,15 @@ export default async function ProjectDetailPage({
   const validationWorkspace = adaptValidationWorkspace(validationWorkspaceBase, personalization.profile.explicitPreferences.guidanceMode);
   const validationPath = validationWorkspace.route;
   const nextMove = buildNextMove({ projectId: project.id, report: displayReport, status, proof: proofSummary, route: validationPath, experiments: proofExperiments, decisions: validationWorkspace.decisions });
+  const marketResearchPolicy = evaluateExecutionPolicy({ plan: getEffectivePlan(profile), executionType: "market_research" });
+  const marketResearch = nextMove.support.type === "research" ? {
+    visible: AUTONOMOUS_EXECUTION_ENABLED(),
+    canStart: marketResearchPolicy.allowed,
+    unavailableReason: marketResearchPolicy.allowed ? null : "Autonomous research is included with Pro and Founder plans when allowance remains.",
+    execution: await latestMarketResearchExecution(profile.id, project.id),
+  } : undefined;
+  if (marketResearch?.visible) await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "do_it_for_me_shown", source: "market_research", metadata: { eligible: marketResearch.canStart }, throttleSeconds: 15 * 60 });
+  if (marketResearch?.execution?.status === "completed") await logBetaEvent({ userId: profile.id, projectId: project.id, eventName: "research_result_viewed", source: "market_research", metadata: { execution_type: "market_research" }, throttleSeconds: 15 * 60 });
   const currentAssumption = validationWorkspace.assumptions.find((item) => item.assumption_key === validationPath.targetAssumptionKey) ?? validationWorkspace.assumptions[0] ?? null;
   const cohorts = betaCohorts({ businessType, projectCreatedAt: project.created_at, isSynthetic: Boolean(project.is_synthetic) });
   const historicalReminders = personalization.profile.explicitPreferences.historicalPersonalizationEnabled && personalization.profile.explicitPreferences.showHistoricalReminders
@@ -278,11 +293,6 @@ export default async function ProjectDetailPage({
 
       {activeSection === "today" && (
         <>
-          <SystemHeader
-            eyebrow="Today"
-            title="What should I do next?"
-            description="One recommendation, grounded in this project, your constraints, and what has actually happened."
-          />
           <TodayFocusCard projectId={project.id} nextMove={nextMove} historicalReminders={historicalReminders} intelligenceProfile={personalization.profile} personalizationContext={personalization.context} />
           <div className="mt-6 grid items-start gap-6 xl:grid-cols-2 [&>*]:mt-0">
             <BiggestQuestionCard
@@ -362,6 +372,7 @@ export default async function ProjectDetailPage({
             description="Choose a validation path, log proof, and compare assumptions against real evidence. Outreach is optional, not forced."
           />
           <ValidationPathWorkspace projectId={project.id} {...validationWorkspace} />
+          <NextMoveExecutionAssistant projectId={project.id} support={nextMove.support} marketResearch={marketResearch} />
           <BiggestQuestionCard
             projectId={project.id}
             assumptionId={currentAssumption?.id}
@@ -378,7 +389,7 @@ export default async function ProjectDetailPage({
             targetAssumptionId={validationWorkspace.assumptions.find((item) => item.assumption_key === validationPath.targetAssumptionKey)?.id}
             starterExperiment={validationPath.starterExperiment}
           />
-          <details className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6">
+          <details id="validation-options" className="mt-6 rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6">
             <summary className="cursor-pointer list-none">
               <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Validation options</p>
               <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink">Open outreach, research, and experiment support.</h2>
@@ -581,8 +592,10 @@ function TodayFocusCard({
   personalizationContext: PersonalizationContext;
 }) {
   const showReasons = intelligenceProfile.explicitPreferences.showPersonalizationReasons;
+  const recommendationId = `${nextMove.routeKey}:${nextMove.primaryHref}:${nextMove.exactAction}`;
 
   return (
+    <NextMoveMotion recommendationId={recommendationId}>
     <section id="next-move" className="mt-6 overflow-hidden rounded-[2rem] border border-violet/20 bg-ink p-6 text-white shadow-card sm:p-8">
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div>
@@ -594,23 +607,24 @@ function TodayFocusCard({
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-xs font-black uppercase tracking-[.14em] text-gold">Record</p><p className="mt-2 text-sm font-semibold leading-6 text-white/80">{nextMove.evidenceToRecord}</p></div>
           </div>
           {showReasons && (
-            <details className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/65">
-              <summary className="cursor-pointer font-black text-lime">Why this recommendation?</summary>
-              <p className="mt-3 leading-6">The active uncertainty, recorded outcomes, project stage, and founder constraints are considered first.</p>
-              {nextMove.constraintNote && <p className="mt-2 leading-6"><span className="font-black text-white">Constraint fit:</span> {nextMove.constraintNote}</p>}
-              {personalizationContext.relevantPatterns.map((pattern) => <p key={pattern.patternId} className="mt-2 leading-6"><span className="font-black text-white">Earlier project context:</span> {pattern.headline}</p>)}
-              {!personalizationContext.relevantPatterns.length && <p className="mt-2 leading-6">No comparable historical pattern changed this move.</p>}
-              <p className="mt-2 text-xs leading-5 text-white/45">Historical observations are correlations, not predictions. Current evidence still decides the move.</p>
-            </details>
+            <Collapsible className="mt-4 border-white/10 bg-white/5 text-sm text-white/65">
+              <CollapsibleTrigger className="font-black text-lime focus-visible:ring-lime focus-visible:ring-offset-ink">Why this recommendation?<ChevronDown className="size-4" /></CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="mt-3 leading-6">The active uncertainty, recorded outcomes, project stage, and founder constraints are considered first.</p>
+                {nextMove.constraintNote && <p className="mt-2 leading-6"><span className="font-black text-white">Constraint fit:</span> {nextMove.constraintNote}</p>}
+                {personalizationContext.relevantPatterns.map((pattern) => <p key={pattern.patternId} className="mt-2 leading-6"><span className="font-black text-white">Earlier project context:</span> {pattern.headline}</p>)}
+                {!personalizationContext.relevantPatterns.length && <p className="mt-2 leading-6">No comparable historical pattern changed this move.</p>}
+                <p className="mt-2 text-xs leading-5 text-white/45">Historical observations are correlations, not predictions. Current evidence still decides the move.</p>
+              </CollapsibleContent>
+            </Collapsible>
           )}
           <TrackedCoreActionLink projectId={projectId} href={nextMove.primaryHref}>{nextMove.primaryLabel}</TrackedCoreActionLink>
           <HistoricalLearningReminder reminders={historicalReminders} />
         </div>
         <aside className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
           <p className="text-xs font-black uppercase tracking-[.14em] text-white/45">Help me do it</p>
-          <div className="mt-4 grid gap-3">
-            {nextMove.assistance.map((item) => <Link key={`${item.kind}-${item.label}`} href={item.href} className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-lime/40 hover:bg-white/10"><span className="block text-sm font-black text-white">{item.label}</span><span className="mt-1 block text-xs leading-5 text-white/55">{item.description}</span></Link>)}
-          </div>
+          <p className="mt-2 text-sm leading-6 text-white/60">PrismForge will prepare the specific materials for this move, then hand you directly to outcome recording.</p>
+          <Link href={nextMove.primaryHref} className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-lime px-4 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-ink">{nextMove.support.primaryLabel}</Link>
           <div className="mt-5 border-t border-white/10 pt-5">
             <p className="text-xs font-black uppercase tracking-[.14em] text-white/45">Current evidence</p>
             <p className="mt-2 text-sm font-bold leading-6 text-white/75">{nextMove.evidenceState}</p>
@@ -619,11 +633,12 @@ function TodayFocusCard({
         </aside>
       </div>
     </section>
+    </NextMoveMotion>
   );
 }
 
 function WhatChangedCard({ nextMove, projectId }: { nextMove: NextMove; projectId: string }) {
-  return <section className="rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-6"><p className="text-xs font-black uppercase tracking-[.16em] text-moss">What changed</p><h2 className="mt-2 font-display text-2xl font-semibold text-ink">Since the last meaningful update</h2><p className="mt-3 text-sm font-semibold leading-6 text-ink/65">{nextMove.whatChanged}</p><Link href={`/projects/${projectId}?section=progress`} className="mt-5 inline-flex text-sm font-black text-violet hover:text-ink">Review evidence and decisions</Link></section>;
+  return <Collapsible className="rounded-[2rem] border-ink/10 bg-white shadow-card"><CollapsibleTrigger className="min-h-0 p-5 sm:p-6"><span><span className="block text-xs font-black uppercase tracking-[.16em] text-moss">What changed</span><span className="mt-2 block font-display text-2xl font-semibold text-ink">Since the last meaningful update</span></span><ChevronDown className="size-5 shrink-0 text-moss" /></CollapsibleTrigger><CollapsibleContent className="px-5 pb-5 sm:px-6 sm:pb-6"><p className="text-sm font-semibold leading-6 text-ink/65">{nextMove.whatChanged}</p><Link href={`/projects/${projectId}?section=progress`} className="mt-5 inline-flex text-sm font-black text-violet hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet">Review evidence and decisions</Link></CollapsibleContent></Collapsible>;
 }
 
 function actionTypeLabel(value: NextMove["actionType"]) {

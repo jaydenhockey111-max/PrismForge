@@ -1,9 +1,27 @@
+"use client";
+
+import { useEffect } from "react";
 import { MessageCircle, Send, Sparkles } from "lucide-react";
 import { CopySectionButton } from "@/components/founder-os/copy-section-button";
 import { cleanGeneratedCopy, lowerFirst, readableProjectName, safePhrase, sentence } from "@/lib/founder-os/copyQuality";
 import type { OpportunityReport } from "@/lib/founder-os/types";
 
 export function OutreachKit({ projectId, projectTitle, report }: { projectId: string; projectTitle: string; report: OpportunityReport }) {
+  useEffect(() => {
+    function revealLinkedKit() {
+      if (window.location.hash !== "#outreach-kit") return;
+      const kit = document.getElementById("outreach-kit");
+      const options = document.getElementById("validation-options");
+      if (!kit || !(options instanceof HTMLDetailsElement)) return;
+      options.open = true;
+      window.requestAnimationFrame(() => kit.scrollIntoView({ block: "start" }));
+    }
+
+    revealLinkedKit();
+    window.addEventListener("hashchange", revealLinkedKit);
+    return () => window.removeEventListener("hashchange", revealLinkedKit);
+  }, []);
+
   const readableTitle = readableProjectName(projectTitle || report.summary.title, {
     audience: report.summary.targetCustomer,
     painPoint: report.summary.painPoint,
@@ -47,11 +65,11 @@ export function OutreachKit({ projectId, projectTitle, report }: { projectId: st
           </p>
           <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Copy-ready messages to validate with real people.</h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
-            Use these messages outside the app, then log what happened in Proof Board. These are local templates, so opening this section does not spend AI credits.
+            Copy a message, use it outside PrismForge, then record what happened so your Next Move can respond.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-lime/30 px-3 py-1 text-xs font-black uppercase tracking-[.12em] text-moss">Local fallback</span>
+          <span className="rounded-full bg-lime/30 px-3 py-1 text-xs font-black uppercase tracking-[.12em] text-moss">Ready to copy</span>
           <CopySectionButton text={allText} label="Copy full kit" analyticsEventName="outreach_copy_copied" projectId={projectId} />
         </div>
       </div>
@@ -90,8 +108,7 @@ export function OutreachKit({ projectId, projectTitle, report }: { projectId: st
         </p>
         <p className="mt-2 text-sm font-semibold leading-6 text-ink/70">{shortHook}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <a href="#proof-board" className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 text-xs font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet hover:shadow-md">Open Proof Board</a>
-          <a href="#proof-board" className="inline-flex min-h-10 items-center justify-center rounded-full border border-violet/20 bg-white px-4 text-xs font-bold text-violet transition hover:-translate-y-0.5 hover:border-violet hover:shadow-md">Log validation result</a>
+          <a href="#proof-board" className="inline-flex min-h-10 items-center justify-center rounded-full bg-ink px-4 text-xs font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet hover:shadow-md">Record what happened</a>
         </div>
       </div>
     </section>

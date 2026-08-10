@@ -58,13 +58,14 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   }, { onConflict: "user_id" });
   if (error) throw error;
 
-  const { error: profileError } = await admin.from("profiles").update({ plan: premium ? "premium" : "free" }).eq("id", userId);
+  const plan = premium && priceId === process.env.STRIPE_FOUNDER_PRICE_ID ? "founder" : premium ? "premium" : "free";
+  const { error: profileError } = await admin.from("profiles").update({ plan }).eq("id", userId);
   if (profileError) throw profileError;
   await logAuditEvent({
     actorId: userId,
     action: premium ? "billing.subscription_active" : "billing.subscription_inactive",
     targetType: "stripe_subscription",
     targetId: subscription.id,
-    metadata: { status: subscription.status, price_id: priceId },
+    metadata: { status: subscription.status, price_id: priceId, plan },
   });
 }

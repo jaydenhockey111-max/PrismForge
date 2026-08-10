@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, CirclePause, MoreHorizontal, RotateCcw, Square, Trash2, X } from "lucide-react";
 import { resumeProject, transitionProjectLifecycle } from "@/app/(app)/projects/lifecycle-actions";
 import type { ProjectLifecycleStatus } from "@/lib/database.types";
 import { PROJECT_LIFECYCLE_LABELS, type ProjectLifecycleAction } from "@/lib/founder-os/projectLifecycle";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export function ProjectLifecycleControls({ projectId, title, lifecycleStatus, lifecycleVersion, deletedAt, recoveryExpiresAt, hasClosureReflection, compact = false }: { projectId: string; title: string; lifecycleStatus: ProjectLifecycleStatus; lifecycleVersion: number; deletedAt: string | null; recoveryExpiresAt: string | null; hasClosureReflection: boolean; compact?: boolean }) {
   const router = useRouter();
@@ -14,26 +15,6 @@ export function ProjectLifecycleControls({ projectId, title, lifecycleStatus, li
   const [reason, setReason] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState("");
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!action) return;
-    closeRef.current?.focus();
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setAction(null);
-      if (event.key === "Tab" && dialogRef.current) {
-        const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),a[href]')];
-        const first = focusable[0]; const last = focusable[focusable.length - 1];
-        if (!first || !last) return;
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [action]);
-
   function submit() {
     if (!action || pending) return;
     setMessage("");
@@ -63,17 +44,17 @@ export function ProjectLifecycleControls({ projectId, title, lifecycleStatus, li
       </details>
       {message && <p role="status" className="mt-2 max-w-xs text-xs font-semibold leading-5 text-coral">{message}</p>}
 
-      {action && <div className="fixed inset-0 z-50 grid place-items-center bg-ink/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAction(null); }}>
-        <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="lifecycle-dialog-title" className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-white/20 bg-white p-5 shadow-glow sm:p-6">
-          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.14em] text-violet">Project lifecycle</p><h2 id="lifecycle-dialog-title" className="mt-2 font-display text-2xl font-semibold text-ink">{dialogTitle(action)}</h2></div><button ref={closeRef} type="button" onClick={() => setAction(null)} aria-label="Close project lifecycle dialog" className="grid size-10 shrink-0 place-items-center rounded-full border border-ink/10 text-ink hover:bg-cream"><X className="size-4" /></button></div>
-          <p className="mt-3 text-sm leading-6 text-ink/60">{dialogDescription(action, title, recoveryExpiresAt)}</p>
+      <Dialog open={Boolean(action)} onOpenChange={(nextOpen) => { if (!nextOpen) setAction(null); }}>
+        {action && <DialogContent className="max-w-lg border-white/20 bg-white p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[.14em] text-violet">Project lifecycle</p><DialogTitle className="mt-2">{dialogTitle(action)}</DialogTitle></div><DialogClose type="button" aria-label="Close project lifecycle dialog"><X className="size-4" /></DialogClose></div>
+          <DialogDescription className="mt-3">{dialogDescription(action, title, recoveryExpiresAt)}</DialogDescription>
           {(action === "pause" || action === "abandon" || action === "restore") && <label className="mt-4 grid gap-2 text-sm font-bold text-ink">Short reason<textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} autoFocus className="min-h-24 rounded-2xl border border-ink/15 p-3 font-normal text-ink" placeholder="What changed?" /></label>}
           {(action === "soft_delete" || action === "permanent_delete") && <label className="mt-4 grid gap-2 text-sm font-bold text-ink">Type the project title to confirm<input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} autoFocus className="min-h-11 rounded-2xl border border-coral/30 px-3 font-normal text-ink" placeholder={title} /></label>}
           {(action === "complete" || action === "abandon") && !hasClosureReflection && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">Save the closure reflection in the Progress section first. It preserves the lesson and prevents an empty “completion” click from becoming progress.</div>}
           {message && <p role="alert" className="mt-4 rounded-xl bg-coral/10 p-3 text-sm font-semibold text-coral">{message}</p>}
           <div className="mt-6 flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setAction(null)} disabled={pending} className="min-h-11 rounded-full border border-ink/15 px-5 text-sm font-black text-ink">Cancel</button><button type="button" onClick={submit} disabled={pending || !canSubmit(action, reason, confirmation, title, hasClosureReflection)} className={`min-h-11 rounded-full px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40 ${action.includes("delete") ? "bg-coral" : "bg-ink hover:bg-violet"}`}>{pending ? "Saving…" : confirmLabel(action)}</button></div>
-        </section>
-      </div>}
+        </DialogContent>}
+      </Dialog>
     </div>
   );
 }

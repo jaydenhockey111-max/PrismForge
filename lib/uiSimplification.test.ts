@@ -41,6 +41,18 @@ describe("focused PrismForge interface", () => {
     expect(launch).not.toContain("readiness.score");
   });
 
+  it("keeps the core loop focused on action, usable help, and factual outcomes", () => {
+    const project = source("app/(app)/projects/[id]/page.tsx");
+    const proofBoard = source("components/founder-os/proof-board.tsx");
+    const outreachKit = source("components/founder-os/outreach-kit.tsx");
+
+    expect(project).not.toContain('title="What should I do next?"');
+    expect(proofBoard).toContain("const [isFormOpen, setIsFormOpen] = useState(false)");
+    expect(proofBoard).toContain("Evidence saved. Your Next Move now reflects the latest result.");
+    expect(outreachKit).toContain("options.open = true");
+    expect(outreachKit.match(/Record what happened/g)).toHaveLength(1);
+  });
+
   it("makes Review about evidence and decisions instead of activity scoring", () => {
     const review = source("app/(app)/progress/page.tsx");
 

@@ -1,6 +1,7 @@
 import type { ProjectDecision, ProjectValidationExperiment } from "@/lib/database.types";
 import { cleanGeneratedCopy } from "@/lib/founder-os/copyQuality";
 import { createProjectContext } from "@/lib/founder-os/projectContext";
+import { buildExecutionSupport, type ExecutionSupport } from "@/lib/founder-os/executionSupport";
 import type { OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
 import { hasRecordedOutcome, type ValidationRoutingResult } from "@/lib/founder-os/validationReadiness";
 import type { ProofSummary } from "@/lib/proof-board";
@@ -30,6 +31,7 @@ export type NextMove = {
   constraintNote: string | null;
   whatChanged: string;
   assistance: NextMoveAssistance[];
+  support: ExecutionSupport;
   routeKey: ValidationRoutingResult["pathType"];
 };
 
@@ -53,26 +55,30 @@ export function buildNextMove({
   const context = createProjectContext({ report, status, proof });
   const action = route.firstAction;
   const assistance = assistanceForRoute(projectId, route.pathType);
-  const actionType: NextMoveActionType = ["customer_discovery", "service_pilot", "content_test"].includes(route.pathType)
-    ? "ai_assisted"
-    : "founder_action";
+  const support = buildExecutionSupport({ report, status, proof, route, experiments });
+  const actionType: NextMoveActionType = route.pathType === "private_research"
+    ? "ai_executable"
+    : ["customer_discovery", "service_pilot", "content_test"].includes(route.pathType)
+      ? "ai_assisted"
+      : "founder_action";
 
   return {
     title: cleanGeneratedCopy(action.action, { heading: true }),
     exactAction: cleanGeneratedCopy(action.action),
-    why: cleanGeneratedCopy(action.why),
+    why: cleanGeneratedCopy([action.why, ...route.decision.factors].join(" ")),
     doneWhen: cleanGeneratedCopy(action.doneWhen),
     evidenceToRecord: cleanGeneratedCopy(action.evidenceToRecord),
     expectedOutcome: cleanGeneratedCopy(action.afterCompletion),
     effort: action.estimatedTime,
     actionType,
-    primaryHref: projectHref(projectId, action.href),
-    primaryLabel: actionType === "ai_assisted" ? "Help me do it" : "Start this move",
+    primaryHref: `/projects/${projectId}?section=validate#execution-support`,
+    primaryLabel: "Help me do it",
     uncertainty: cleanGeneratedCopy(route.targetAssumption),
     evidenceState: evidenceState(proof),
     constraintNote: founderConstraintNote(context.founder),
     whatChanged: latestMaterialChange(experiments, decisions, proof),
     assistance,
+    support,
     routeKey: route.pathType,
   };
 }
@@ -191,10 +197,4 @@ function joinNatural(values: string[]) {
   if (values.length <= 1) return values[0] ?? "";
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
-}
-
-function projectHref(projectId: string, href: string) {
-  if (href.startsWith("?")) return `/projects/${projectId}${href}`;
-  if (href.startsWith("#")) return `/projects/${projectId}?section=validate${href}`;
-  return href;
 }

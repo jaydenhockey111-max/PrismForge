@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { LogOut, UserRound } from "lucide-react";
 import { AppNavigation } from "@/components/app-navigation";
 import { BetaFeedbackButton } from "@/components/beta-feedback-button";
 import { ProjectSwitcher } from "@/components/founder-os/project-switcher";
+import { ProjectContentMotion } from "@/components/founder-os/project-content-motion";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logout } from "@/app/(auth)/actions";
@@ -76,7 +78,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-3"><span className="rounded-full border border-ink/10 bg-cream/70 px-3 py-1.5 text-[.6875rem] font-bold uppercase tracking-[.12em] text-ink/50">{planLabel}</span><BetaFeedbackButton /></div>
         </header>
         <div className="border-b border-ink/10 bg-white/55 px-5 py-3 backdrop-blur lg:hidden"><BetaFeedbackButton /></div>
-        <main className="w-full max-w-none px-5 py-8 lg:px-8 lg:py-10 xl:px-10">{children}</main>
+        <main className="w-full max-w-none px-5 py-8 lg:px-8 lg:py-10 xl:px-10">
+          <Suspense fallback={children}>
+            <ProjectContentMotion>{children}</ProjectContentMotion>
+          </Suspense>
+        </main>
       </div>
     </div>
   );

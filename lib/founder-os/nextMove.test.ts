@@ -25,7 +25,8 @@ describe("canonical Next Move", () => {
 
     expect(move.title).toBeTruthy();
     expect(move.routeKey).toBe(route.pathType);
-    expect(move.primaryHref).toContain("/projects/project-1");
+    expect(move.primaryHref).toBe("/projects/project-1?section=validate#execution-support");
+    expect(move.primaryLabel).toBe("Help me do it");
     expect(move.constraintNote).toContain("4 hours per week");
     expect(move.constraintNote).toContain("$50 budget");
     expect(move.evidenceState).toBe("No external evidence recorded yet");

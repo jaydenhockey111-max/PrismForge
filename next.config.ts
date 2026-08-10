@@ -1,8 +1,12 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Keep Workflow's generated bundles scoped to this application; Sentry's
+  // tracing defaults otherwise make the workflow builder walk above the repo.
+  outputFileTracingRoot: process.cwd(),
   experimental: {
     serverActions: {
       bodySizeLimit: "1mb",
@@ -10,7 +14,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+const sentryConfig = withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
@@ -47,3 +51,5 @@ export default withSentryConfig(nextConfig, {
     },
   },
 });
+
+export default withWorkflow(sentryConfig);
