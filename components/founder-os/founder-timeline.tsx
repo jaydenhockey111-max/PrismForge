@@ -37,12 +37,12 @@ export function FounderTimeline({ events, referenceNow, category, query, project
 function TimelineCard({ event }: { event: FounderTimelineResult }) {
   const Icon = categoryIcon(event.category);
   const learningInsightId = event.origin_system === "founder_learning" && event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) && typeof event.metadata.insight_id === "string" ? event.metadata.insight_id : null;
-  const hasDetails = Boolean(event.decision_reason || event.previous_assumption || event.new_assumption || event.decision_evidence || event.decision_outcome || event.proof_learnings || event.xp_reason);
+  const hasDetails = Boolean(event.decision_reason || event.previous_assumption || event.new_assumption || event.decision_evidence || event.decision_outcome || event.proof_learnings);
   return <li className="relative pl-12 sm:pl-14">
     <span className={cn("absolute left-0 top-5 z-10 grid size-11 place-items-center rounded-2xl border bg-white shadow-sm sm:size-12", categoryTone(event.category))}><Icon className="size-5" aria-hidden="true" /></span>
     <article className="min-w-0 overflow-hidden rounded-[1.6rem] border border-ink/10 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:border-violet/25 hover:shadow-lg sm:p-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-[.1em] text-ink/55">{event.category}</span>{event.evidence_level !== "none" && <span className="inline-flex items-center gap-1 rounded-full bg-lime/30 px-2.5 py-1 text-[11px] font-black text-moss"><ShieldCheck className="size-3" />{evidenceLabel(event.evidence_level)}</span>}{event.awarded_xp ? <span className="rounded-full bg-gold/25 px-2.5 py-1 text-[11px] font-black text-ink">+{event.awarded_xp} XP</span> : null}</div><h3 className="mt-3 break-words font-display text-xl font-semibold text-ink">{event.headline}</h3>{event.description && <p className="mt-2 break-words text-sm leading-6 text-ink/60">{event.description}</p>}</div>
+        <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-cream px-2.5 py-1 text-[11px] font-black uppercase tracking-[.1em] text-ink/55">{event.category}</span>{event.evidence_level !== "none" && <span className="inline-flex items-center gap-1 rounded-full bg-lime/30 px-2.5 py-1 text-[11px] font-black text-moss"><ShieldCheck className="size-3" />{evidenceLabel(event.evidence_level)}</span>}</div><h3 className="mt-3 break-words font-display text-xl font-semibold text-ink">{event.headline}</h3>{event.description && <p className="mt-2 break-words text-sm leading-6 text-ink/60">{event.description}</p>}</div>
         <time dateTime={event.created_at} className="shrink-0 text-xs font-bold text-ink/45">{format(new Date(event.created_at), "MMM d · h:mm a")}</time>
       </div>
       {event.project_title && <p className="mt-3 truncate text-xs font-bold text-violet">{event.project_title}</p>}
@@ -60,7 +60,6 @@ function DecisionContext({ event }: { event: FounderTimelineResult }) {
     {event.decision_evidence && <Context label="Evidence" value={event.decision_evidence} />}
     {event.decision_outcome && <Context label="Outcome" value={event.decision_outcome} />}
     {event.proof_learnings && <Context label="Learning" value={event.proof_learnings} />}
-    {event.xp_reason && <Context label="Why XP was earned" value={event.xp_reason} />}
   </div>;
 }
 function Context({ label, value }: { label: string; value: string }) { return <div><p className="text-[11px] font-black uppercase tracking-[.14em] text-ink/40">{label}</p><p className="mt-1">{value}</p></div>; }

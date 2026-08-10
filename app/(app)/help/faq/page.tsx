@@ -10,19 +10,19 @@ const SUPPORT_BODY = "Please describe what happened, what page you were on, and 
 const faqs = [
   {
     question: "What is PrismForge actually for?",
-    answer: "PrismForge helps first-time founders stop guessing and start proving. The goal is to turn one idea into a validation plan, outreach scripts, a proof tracker, and a clear next action.",
+    answer: "PrismForge helps first-time founders stop guessing and start proving. It remembers the project, recommends one clear Next Move, helps you do it, and learns from the recorded outcome.",
   },
   {
     question: "What should I do first?",
-    answer: "Create one project, open it, read the Next Best Action, use one AI Employee or validation tool, then contact real people and log what happened in Proof Board.",
+    answer: "Create one project, read its Biggest Question and Next Move, run one small test with real people, then log what happened in Proof Board.",
   },
   {
     question: "What is a project?",
-    answer: "A project is one business idea workspace. It stores the report, AI outputs, proof experiments, notes, launch checklist, and local Market Pulse preview for that idea.",
+    answer: "A project is one business idea workspace. It keeps the definition, biggest question, Next Move, proof experiments, decisions, notes, launch checklist, and meaningful history together.",
   },
   {
     question: "Does opening a project spend OpenAI credits?",
-    answer: "No. Project pages, Proof Board, notes, checklists, exports, and Local Market Pulse preview should not call OpenAI on page load. AI credits are only used after explicit generation clicks on approved features.",
+    answer: "No. Project pages, Proof Board, notes, checklists, exports, and Review should not call OpenAI on page load. AI credits are only used after explicit generation clicks on approved features.",
   },
   {
     question: "Why do some AI buttons show cached or cooldown states?",
@@ -30,15 +30,15 @@ const faqs = [
   },
   {
     question: "What is Proof Board?",
-    answer: "Proof Board is where you log real-world evidence: people contacted, replies, pain confirmed, interested users, waitlist signups, payment intent, revenue, quotes, learnings, and next actions.",
+    answer: "Proof Board is where you log real-world outcomes: people contacted, replies, problem signals, interested users, waitlist signups, payment intent, revenue, quotes, learnings, and follow-up actions.",
   },
   {
     question: "What should I log if I have no users yet?",
     answer: "Start with a tiny validation experiment: contact 10 people in your target audience and ask about the pain point before building more features. Planned experiments can start with zero metrics.",
   },
   {
-    question: "What is Local Market Pulse?",
-    answer: "During beta, Market Pulse is a local preview based on saved project context. It does not connect to external web data or run in the background.",
+    question: "What is Review?",
+    answer: "Review connects recorded evidence, decisions, meaningful history, and reusable learning from earlier projects. It avoids activity scores so the next recommendation stays grounded in outcomes.",
   },
   {
     question: "Can I pay for PrismForge yet?",
@@ -75,7 +75,7 @@ export default function FaqPage() {
         </p>
         <h1 className="page-title mt-3">Quick answers for beta testers.</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
-          If you are not sure where to click, remember the loop: create a project, get one next action, contact real people, log proof, and repeat.
+          If you are not sure where to click, remember the loop: create a project, get one Next Move, contact real people, record what happened, and repeat.
         </p>
       </section>
 

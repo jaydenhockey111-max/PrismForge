@@ -1,7 +1,6 @@
 import { Check, Download, HelpCircle, Mail, ShieldAlert, SlidersHorizontal, Trash2, UserRound } from "lucide-react";
 import { deleteAccount } from "@/app/(app)/account/actions";
 import { updateProfile } from "@/app/(app)/profile/actions";
-import { EmailPreferencesCard } from "@/components/email-preferences-card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, FormMessage, Input, Select } from "@/components/ui/form";
 import { requireProfile } from "@/lib/auth";
@@ -35,7 +34,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
           <h1 className="page-title mt-3">One clean control center.</h1>
           <p className="mt-3 max-w-2xl text-ink/60">
-            Profile, email preferences, data export, account deletion, and support now live here so testers do not have to hunt through duplicate pages.
+            Profile, guidance, email digests, data export, account deletion, and support live here so you do not have to hunt through duplicate pages.
           </p>
         </div>
       </section>
@@ -73,7 +72,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
             <fieldset>
               <legend className="text-sm font-semibold text-ink">Founder interests</legend>
-              <p className="mt-1 text-xs text-ink/55">Choose what you care about. This improves reports, founder-fit scoring, and Market Pulse context.</p>
+              <p className="mt-1 text-xs text-ink/55">Choose what you care about. This improves reports, founder-fit scoring, and project guidance.</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {INTERESTS.map((interest) => (
                   <label key={interest} className="cursor-pointer">
@@ -102,12 +101,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
 
         <div className="grid gap-5">
-          <EmailPreferencesCard initialReceiveEmails={profile.alerts_enabled ? "yes" : "no"} />
-
           <section className="rounded-[1.75rem] border border-ink/10 bg-white p-6 shadow-sm">
             <div className="grid size-12 place-items-center rounded-2xl bg-moss/10 text-moss"><Download className="size-5" /></div>
             <h2 className="mt-4 font-display text-2xl font-semibold text-ink">Export your data</h2>
-            <p className="mt-2 text-sm leading-6 text-ink/60">Download your profile, saved projects, progress, rewards, and notification history as JSON.</p>
+            <p className="mt-2 text-sm leading-6 text-ink/60">Download your profile, saved projects, evidence, decisions, and account history as JSON.</p>
             <ButtonLink href="/account/export" className="mt-5">Download JSON</ButtonLink>
           </section>
 

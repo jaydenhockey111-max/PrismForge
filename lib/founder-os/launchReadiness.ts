@@ -119,7 +119,7 @@ export function calculateLaunchReadiness(input: LaunchReadinessInput, checkedIte
     totalCount: allItems.length,
     firstChannel: cleanGeneratedCopy(firstChannel),
     testerInvite: cleanGeneratedCopy(testerInvite),
-    launchPlan: cleanGeneratedMarkdown(createLaunchPlan({ input, score, verdict, blockers, completedCount, totalCount: allItems.length, firstChannel, testerInvite })),
+    launchPlan: cleanGeneratedMarkdown(createLaunchPlan({ input, verdict, blockers, completedCount, totalCount: allItems.length, firstChannel, testerInvite })),
   };
 }
 
@@ -141,7 +141,6 @@ function launchBlockers(input: LaunchReadinessInput, checkedItems: Record<string
 
 function createLaunchPlan({
   input,
-  score,
   verdict,
   blockers,
   completedCount,
@@ -150,7 +149,6 @@ function createLaunchPlan({
   testerInvite,
 }: {
   input: LaunchReadinessInput;
-  score: number;
   verdict: string;
   blockers: string[];
   completedCount: number;
@@ -166,11 +164,10 @@ function createLaunchPlan({
     `Project type: ${context.projectType}`,
     `Solution category: ${context.solutionCategory}`,
     `Release type: ${context.language.releaseNoun}`,
-    `Launch readiness: ${score}/100`,
     `Verdict: ${verdict}`,
     `Checklist: ${completedCount}/${totalCount} complete`,
     `Business type: ${BUSINESS_TYPE_LABELS[input.businessType] ?? input.businessType}`,
-    `Validation proof: ${input.validationProof ? `${input.validationProof.confidence_score}/100 from ${input.validationProof.experiment_count} experiment(s)` : "Not logged yet"}`,
+    `Validation proof: ${input.validationProof ? `${input.validationProof.experiment_count} experiment(s), ${input.validationProof.people_contacted} people contacted, ${input.validationProof.replies} replies, ${input.validationProof.payment_intent} payment-intent signal(s)` : "Not logged yet"}`,
     "",
     "Top blockers:",
     ...(blockers.length ? blockers.map((blocker) => `- ${blocker}`) : ["- Looks alpha-ready. Your next move is inviting testers."]),

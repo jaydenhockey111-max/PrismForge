@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMockOpportunityReport } from "./reportFallback";
-import { routeValidationPath } from "./validationReadiness";
+import { hasRecordedOutcome, routeValidationPath } from "./validationReadiness";
 import type { BusinessType, UserOpportunityInput } from "./types";
 import type { ProofSummary } from "@/lib/proof-board";
 
@@ -13,6 +13,24 @@ function route(input: { businessType?: BusinessType; idea?: string; preference?:
 }
 
 describe("flexible validation routing", () => {
+  it("does not treat a planned experiment or AI-written hypothesis as evidence", () => {
+    const planned = {
+      status: "planned" as const,
+      evidence_type: "landing_page_result",
+      hypothesis: "Visitors will join the waitlist.",
+      people_contacted: 0,
+      replies: 0,
+      pain_confirmed: 0,
+      interested_users: 0,
+      waitlist_signups: 0,
+      payment_intent: 0,
+      preorders_or_revenue_cents: 0,
+    };
+
+    expect(hasRecordedOutcome(planned)).toBe(false);
+    expect(route({ experiments: [planned] }).pathType).not.toBe("pricing_test");
+  });
+
   it("clarifies an underspecified project without forcing outreach", () => {
     const unclear = report(); unclear.summary.targetCustomer = "users"; unclear.summary.painPoint = "idk";
     const result = routeValidationPath({ report: unclear, status: "idea", proof: emptyProof });

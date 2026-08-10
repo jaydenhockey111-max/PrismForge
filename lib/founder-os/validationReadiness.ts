@@ -187,8 +187,11 @@ function starter(title: string, goal: string, channel: ValidationRoutingResult["
 type RoutingState = ReturnType<typeof assessState>;
 function assessState(input: ValidationRoutingInput, context: ProjectContext, proof: ProofSummary) {
   const experiments = input.experiments ?? [];
-  const evidenceTypes = new Set(experiments.map((row) => row.evidence_type).filter(Boolean));
-  const completedTypes = new Set(experiments.filter((row) => row.status === "completed" && hasText(row.learnings)).map((row) => row.evidence_type).filter(Boolean));
+  // Selecting an evidence type or writing a hypothesis is still preparation.
+  // Only a recorded outcome may change the recommendation.
+  const outcomeExperiments = experiments.filter(hasRecordedOutcome);
+  const evidenceTypes = new Set(outcomeExperiments.map((row) => row.evidence_type).filter(Boolean));
+  const completedTypes = new Set(outcomeExperiments.filter((row) => row.status === "completed").map((row) => row.evidence_type).filter(Boolean));
   const history = input.pathHistory ?? [];
   const completedPrep = history.filter((row) => row.status === "completed" && ["project_clarification", "private_research", "prototype_test"].includes(row.path_type)).length;
   const hasExternalEvidence = proof.people_contacted > 0 || proof.replies > 0 || proof.pain_confirmed > 0 || proof.interested_users > 0 || proof.waitlist_signups > 0 || proof.payment_intent > 0 || proof.preorders_or_revenue_cents > 0 || [...evidenceTypes].some((value) => value && value !== "research_pattern" && value !== "other");
@@ -209,6 +212,20 @@ function assessState(input: ValidationRoutingInput, context: ProjectContext, pro
     repeatedPreparation: completedPrep >= 3,
     contactTarget, proof, experiments, evidenceTypes, completedTypes,
   };
+}
+
+export function hasRecordedOutcome(experiment: Partial<ProjectValidationExperiment>) {
+  return Boolean(
+    hasText(experiment.learnings)
+    || hasText(experiment.key_quotes)
+    || Number(experiment.people_contacted ?? 0) > 0
+    || Number(experiment.replies ?? 0) > 0
+    || Number(experiment.pain_confirmed ?? 0) > 0
+    || Number(experiment.interested_users ?? 0) > 0
+    || Number(experiment.waitlist_signups ?? 0) > 0
+    || Number(experiment.payment_intent ?? 0) > 0
+    || Number(experiment.preorders_or_revenue_cents ?? 0) > 0,
+  );
 }
 
 function pathCompletion(pathType: ValidationPathType, state: RoutingState) {

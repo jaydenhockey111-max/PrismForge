@@ -202,7 +202,7 @@ export function buildValueProofReport({
     stillUnknown: unknownItems(report, proof),
     nextStep: {
       ...nextBestAction,
-      source: source("prismforge_recommendation", "Next Best Action logic", project.id, project.updated_at),
+      source: source("prismforge_recommendation", "Next Move logic", project.id, project.updated_at),
     },
     timeline: timeline.map((item) => ({ title: item.label, detail: item.detail, source: source("derived_summary", item.label, project.id, item.date) })),
   };
@@ -503,7 +503,7 @@ function completedActionItems(experiments: ProjectValidationExperiment[], proof:
   const completed = experiments.filter((experiment) => experiment.status === "completed");
   const items = completed.map((experiment) => itemText("Completed validation experiment", experiment.title, source("proof_board_entry", experiment.title, experiment.id, experiment.updated_at)));
   if (proof.people_contacted > 0) items.push(itemText("Contacted target users", `${proof.people_contacted} people contacted.`, source("proof_board_entry", "Outreach totals")));
-  return items.length ? items : [itemText("No completed external action yet", "Complete your Next Best Action or record a Proof Board experiment to build history.", source("derived_summary", "Empty state"))];
+  return items.length ? items : [itemText("No completed external action yet", "Complete your Next Move or record a Proof Board outcome to build history.", source("derived_summary", "Empty state"))];
 }
 
 function milestoneItems(project: Pick<OpportunityProject, "id" | "status" | "created_at" | "updated_at">, proof: ProofSummary, experiments: ProjectValidationExperiment[]): ValueProofTextItem[] {

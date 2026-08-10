@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ArrowRight, CheckCircle2, Pencil, Sparkles } from "lucide-react";
+import { CheckCircle2, Pencil, Sparkles } from "lucide-react";
 import { updateBiggestQuestion } from "@/app/(app)/projects/validation-actions";
 
 type FeedbackChoice = "yes" | "somewhat" | "no";
@@ -13,14 +13,12 @@ export function BiggestQuestionCard({
   statement,
   status,
   evidenceSummary,
-  nextActionHref,
 }: {
   projectId: string;
   assumptionId?: string | null;
   statement: string;
   status: "untested" | "supported" | "contradicted" | "inconclusive";
   evidenceSummary?: string | null;
-  nextActionHref: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(statement);
@@ -58,7 +56,6 @@ export function BiggestQuestionCard({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button type="button" disabled={!assumptionId} onClick={() => setEditing(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-ink/15 bg-white px-4 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:border-violet/40 disabled:opacity-50"><Pencil className="size-4" />Edit</button>
-          <Link href={nextActionHref} onClick={() => void track("core_loop_next_action_started", projectId, { source: "biggest_question" })} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-violet">Start test <ArrowRight className="size-4" /></Link>
         </div>
       </div>
     </section>
@@ -66,7 +63,7 @@ export function BiggestQuestionCard({
 }
 
 export function TrackedCoreActionLink({ projectId, href, children }: { projectId: string; href: string; children: React.ReactNode }) {
-  return <Link href={href} onClick={() => void track("core_loop_next_action_started", projectId, { source: "next_best_action" })} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-ink px-6 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-moss hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-moss focus-visible:ring-offset-2">{children}</Link>;
+  return <Link href={href} onClick={() => { void track("core_loop_next_action_started", projectId, { source: "next_move" }); void track("next_move_help_opened", projectId, { source: "next_move" }); }} className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-lime px-6 text-sm font-black text-ink transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime focus-visible:ring-offset-2 focus-visible:ring-offset-ink">{children}</Link>;
 }
 
 export function CoreValueFeedback({ projectId }: { projectId: string }) {

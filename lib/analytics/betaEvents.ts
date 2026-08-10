@@ -235,6 +235,10 @@ export type BetaEventName =
   | "core_loop_feedback_dismissed"
   | "core_loop_feedback_prompt_viewed"
   | "core_loop_error_viewed"
+  | "next_move_viewed"
+  | "next_move_help_opened"
+  | "next_move_outcome_recorded"
+  | "next_move_recalculated"
   | "payment_signal_recorded"
   | "case_study_permission_recorded";
 

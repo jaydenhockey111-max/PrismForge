@@ -31,7 +31,7 @@ export default function HelpPage() {
 
       <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <HelpCard icon={<MessageSquareText className="size-5" />} title="Beta feedback" description="Use the feedback button for quick ratings and notes while testing." href="/dashboard" action="Open dashboard" />
-        <HelpCard icon={<BookOpen className="size-5" />} title="FAQ" description="Get quick answers about projects, AI credits, Proof Board, Market Pulse, payments, and beta limits." href="/help/faq" action="Read FAQ" />
+        <HelpCard icon={<BookOpen className="size-5" />} title="FAQ" description="Get quick answers about projects, AI credits, Proof Board, Review, payments, and beta limits." href="/help/faq" action="Read FAQ" />
         <HelpCard icon={<ShieldCheck className="size-5" />} title="Account controls" description="Export your data, manage email digests, or request deletion from Settings." href="/settings" action="Open settings" />
         <HelpCard icon={<HelpCircle className="size-5" />} title="Testing guide" description="Read the private-alpha handbook and suggested test flow." href="/beta-guide" action="Read guide" />
       </div>

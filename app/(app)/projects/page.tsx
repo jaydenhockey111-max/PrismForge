@@ -19,7 +19,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const [{ data: projects, error }, { data: proofRows }, { data: focus }, { data: reflections }] = await Promise.all([
     supabase
       .from("opportunity_projects")
-      .select("id,title,business_type,target_customer,score,status,lifecycle_status,lifecycle_version,last_meaningful_activity_at,deleted_at,recovery_expires_at,created_at,updated_at")
+      .select("id,title,business_type,target_customer,status,lifecycle_status,lifecycle_version,last_meaningful_activity_at,deleted_at,recovery_expires_at,created_at,updated_at")
       .eq("user_id", profile.id)
       .order("last_meaningful_activity_at", { ascending: false })
       .limit(100),
@@ -40,7 +40,6 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       title: project.title?.trim() || "Untitled project",
       businessType: project.business_type as BusinessType,
       targetCustomer: project.target_customer,
-      score: project.score,
       status: project.status as ProjectStatus,
       lifecycleStatus: project.lifecycle_status as ProjectLifecycleStatus,
       lifecycleVersion: project.lifecycle_version,
@@ -48,11 +47,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       deletedAt: project.deleted_at,
       recoveryExpiresAt: project.recovery_expires_at,
       createdAt: project.created_at,
-      updatedAt: project.updated_at,
       lastMeaningfulActivityAt: project.last_meaningful_activity_at ?? project.updated_at,
-      proofConfidence: proof.confidence_score,
       proofExperiments: proof.experiment_count,
-      peopleContacted: proof.people_contacted,
       nextAction: nextActionForProject(project.status as ProjectStatus, proof),
       hasClosureReflection: (reflections ?? []).some((reflection) => reflection.project_id === project.id),
     };
@@ -79,7 +75,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
       {rows.length === 0 ? (
         <div className="mt-8">
-          <EmptyState title="No projects yet" description="Create your first project workspace with a target customer, MVP, validation plan, and next action." href="/generate" action="Create your first project" />
+          <EmptyState title="No projects yet" description="Create your first project workspace with a target customer, MVP, validation plan, and one clear Next Move." href="/generate" action="Create your first project" />
           <p className="mt-4 rounded-2xl bg-cream/70 p-4 text-sm font-semibold text-ink/60">Not seeing a project you created? Make sure you signed in with the same email.</p>
         </div>
       ) : (
@@ -93,7 +89,7 @@ function nextActionForProject(status: ProjectStatus, proof: ReturnType<typeof su
   if (proof.experiment_count === 0) return "Create your first Proof Board experiment.";
   if (proof.people_contacted < 5) return "Contact 5 target users and log what happened.";
   if (proof.replies < 3) return "Improve outreach and get your first 3 replies.";
-  if (proof.pain_confirmed < 3) return "Confirm the pain with 3 people.";
+  if (proof.pain_confirmed < 3) return "Learn whether 3 people describe this problem without being led.";
   if (proof.interested_users < 1 && proof.waitlist_signups < 1) return "Ask interested users to join a waitlist or beta.";
   if (proof.payment_intent < 1 && proof.preorders_or_revenue_cents <= 0) return "Test payment intent before overbuilding.";
   if (status === "idea") return "Move this project into validation.";

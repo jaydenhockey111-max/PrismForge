@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, ClipboardCheck, Pencil, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
+import { ClipboardCheck, Pencil, Plus, ShieldCheck, Trash2, Users } from "lucide-react";
 import {
   createValidationExperiment,
   deleteValidationExperiment,
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import type { ProjectValidationExperiment } from "@/lib/database.types";
 import {
-  confidenceBand,
   starterExperimentTemplate,
   summarizeProof,
   validationChannels,
@@ -166,7 +165,7 @@ export function ProofBoard({
           </p>
           <h2 className="mt-2 break-words font-display text-3xl font-semibold tracking-tight sm:text-4xl">Track real-world validation evidence for this idea.</h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-ink/60">
-            Plans are assumptions. Proof comes from real people. Log what happened outside the app so your Next Best Action, confidence, and First Dollar Sprint can update.
+            Plans and hypotheses are not evidence. Record what actually happened outside the app so PrismForge can update the Next Move.
           </p>
         </div>
         <Button type="button" onClick={() => { setIsFormOpen(true); void trackEvidenceStart(projectId, "blank"); }} className="gap-2">
@@ -177,29 +176,10 @@ export function ProofBoard({
 
       <div className="mt-6 grid gap-5 xl:grid-cols-[340px_1fr]">
         <div className="grid gap-5">
-          <div className="rounded-[1.75rem] border border-ink/10 bg-gradient-to-br from-lime/35 via-cream to-white p-5">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Validation confidence</p>
-            <div className="mt-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="font-display text-6xl font-semibold">{summary.confidence_score}</p>
-                <p className="text-sm font-black uppercase tracking-[.12em] text-ink/45">/100</p>
-              </div>
-              <span className={cn("rounded-full px-3 py-1 text-xs font-black uppercase tracking-[.12em]", confidenceClass(summary.confidence_score))}>
-                {summary.confidence_label}
-              </span>
-            </div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-white">
-              <div className="h-full rounded-full bg-gradient-to-r from-coral via-gold to-moss transition-all duration-700" style={{ width: `${summary.confidence_score}%` }} />
-            </div>
-            <p className="mt-4 text-sm leading-6 text-ink/60">{summary.evidence_sentence}</p>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-ink/10 bg-ink p-5 text-white">
-            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.16em] text-gold">
-              <Activity className="size-4" />
-              Next evidence move
-            </p>
-            <p className="mt-3 text-sm font-semibold leading-6 text-white/75">{summary.recommended_next_action}</p>
+          <div className="rounded-[1.75rem] border border-moss/15 bg-gradient-to-br from-lime/25 via-cream to-white p-5">
+            <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Recorded evidence</p>
+            <h3 className="mt-3 font-display text-3xl font-semibold text-ink">{evidenceSummaryLabel(summary)}</h3>
+            <p className="mt-3 text-sm leading-6 text-ink/60">Only saved outcomes and real-world response counts influence the recommendation. A planned test, AI output, or hypothesis does not count.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -410,8 +390,6 @@ function ExperimentCard({
   onDelete: () => void;
   disabled: boolean;
 }) {
-  const band = confidenceBand(experiment.confidence_score);
-
   return (
     <article className="rounded-[1.75rem] border border-ink/10 bg-white p-5 shadow-sm">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -419,9 +397,7 @@ function ExperimentCard({
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-cream px-3 py-1 text-xs font-black uppercase tracking-[.12em] text-ink/55">{experiment.status}</span>
             {experiment.channel && <span className="rounded-full bg-violet/10 px-3 py-1 text-xs font-black uppercase tracking-[.12em] text-violet">{experiment.channel}</span>}
-            <span className={cn("rounded-full px-3 py-1 text-xs font-black uppercase tracking-[.12em]", confidenceClass(experiment.confidence_score))}>
-              {experiment.confidence_score}/100 · {band}
-            </span>
+            <span className="rounded-full bg-lime/25 px-3 py-1 text-xs font-black uppercase tracking-[.12em] text-moss">{experimentEvidenceLabel(experiment)}</span>
           </div>
           <h3 className="mt-3 break-words font-display text-2xl font-semibold">{experiment.title}</h3>
           {experiment.goal && <p className="mt-2 break-words text-sm leading-6 text-ink/60">{experiment.goal}</p>}
@@ -544,7 +520,7 @@ function nextEvidenceGaps(summary: ReturnType<typeof summarizeProof>) {
   const gaps = [
     summary.people_contacted < 10 ? "Contact 10 people" : "",
     summary.replies < 3 ? "Get 3 replies" : "",
-    summary.pain_confirmed < 3 ? "Confirm pain 3 times" : "",
+    summary.pain_confirmed < 3 ? "Record 3 clear problem signals" : "",
     summary.interested_users < 2 ? "Find 2 interested users" : "",
     summary.waitlist_signups < 1 ? "Collect 1 waitlist signup" : "",
     summary.payment_intent < 1 ? "Ask for payment intent" : "",
@@ -552,11 +528,20 @@ function nextEvidenceGaps(summary: ReturnType<typeof summarizeProof>) {
   return gaps.length ? gaps.slice(0, 3) : ["Proof looks strong", "Invite testers", "Build the smallest MVP"];
 }
 
-function confidenceClass(score: number) {
-  if (score <= 20) return "bg-ink/10 text-ink/75";
-  if (score <= 45) return "bg-coral/15 text-coral";
-  if (score <= 70) return "bg-gold/25 text-amber-700";
-  return "bg-lime/35 text-moss";
+function evidenceSummaryLabel(summary: ReturnType<typeof summarizeProof>) {
+  if (summary.preorders_or_revenue_cents > 0) return "Revenue outcome recorded";
+  if (summary.payment_intent > 0) return "Payment intent recorded";
+  if (summary.waitlist_signups > 0 || summary.interested_users > 0) return "Commitment signals recorded";
+  if (summary.replies > 0 || summary.pain_confirmed > 0) return "Conversation outcomes recorded";
+  if (summary.people_contacted > 0) return "Outreach started; response outcome unknown";
+  return "No external evidence yet";
+}
+
+function experimentEvidenceLabel(experiment: ProjectValidationExperiment) {
+  if (experiment.preorders_or_revenue_cents > 0) return "Revenue recorded";
+  if (experiment.payment_intent > 0 || experiment.waitlist_signups > 0 || experiment.interested_users > 0) return "Commitment recorded";
+  if (experiment.replies > 0 || experiment.pain_confirmed > 0 || experiment.people_contacted > 0 || experiment.learnings?.trim()) return "Outcome recorded";
+  return "Planned — not evidence";
 }
 
 function toNonNegativeInteger(value: string) {

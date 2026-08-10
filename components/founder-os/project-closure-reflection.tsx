@@ -24,7 +24,7 @@ export function ProjectClosureReflectionCard({ projectId, initial }: { projectId
     try {
       const result = await saveProjectClosureReflection(projectId, { outcome, whatWasLearned: learned, strongestEvidence: evidence, biggestMistake: mistake, closureReason: reason, wouldDoDifferently: different });
       if (!mountedRef.current) return;
-      setMessage(result.ok ? `Reflection saved.${result.awardedXp ? ` +${result.awardedXp} founder XP recorded once.` : ""}` : result.error);
+      setMessage(result.ok ? "Reflection saved to this project’s history." : result.error);
     } catch {
       if (!mountedRef.current) return;
       setMessage("Reflection could not be saved. Your text is still here.");
@@ -36,7 +36,7 @@ export function ProjectClosureReflectionCard({ projectId, initial }: { projectId
       <summary className="cursor-pointer list-none">
         <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.16em] text-moss"><BookCheck className="size-4" />Project closure and lessons</p>
         <h2 className="mt-2 font-display text-3xl font-semibold text-ink">Pause or close this chapter thoughtfully.</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">A status change alone earns nothing. A detailed reflection can receive reduced, one-time progress credit because it captures reusable learning.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink/60">A detailed reflection preserves the evidence and lessons that should inform future projects.</p>
       </summary>
       <div className="mt-6 grid gap-4 border-t border-ink/10 pt-6">
         <label className="grid gap-2 text-sm font-bold text-ink">Outcome<select value={outcome} onChange={(event) => setOutcome(event.target.value as ProjectClosureReflection["outcome"])} className="min-h-11 rounded-2xl border border-ink/10 bg-cream/40 px-4 outline-none focus:border-violet"><option value="paused">Paused</option><option value="completed">Completed</option><option value="archived">Archived</option><option value="abandoned">Abandoned</option></select></label>

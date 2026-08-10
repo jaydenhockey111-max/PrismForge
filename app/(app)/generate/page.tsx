@@ -19,6 +19,8 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
   const requestId = crypto.randomUUID();
   const defaultHours = Math.min(100, Math.max(1, Math.round(intelligence.profile.declaredContext.hoursPerWeek ?? 8)));
   const defaultRisk = Math.min(10, Math.max(1, Math.round(intelligence.profile.declaredContext.riskTolerance ?? 5)));
+  const defaultInterests = profile.interests.join(", ");
+  const defaultSkills = [profile.occupation, profile.education_level].filter(Boolean).join(", ");
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -36,14 +38,14 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
           <p className="mt-3 text-sm leading-6 text-ink/55">Enough structure to act, without pretending the idea is already proven.</p>
         </div>
         <div className="grid gap-2 text-sm font-semibold leading-6 text-ink/70 sm:grid-cols-3">
-          {["A concise project summary", "The biggest question to test", "One complete Next Best Action"].map((item) => (
+          {["A concise project summary", "The biggest question to test", "One clear Next Move"].map((item) => (
             <div key={item} className="flex gap-2 rounded-xl bg-cream/65 p-4"><Check className="mt-1 size-4 shrink-0 text-violet" />{item}</div>
           ))}
         </div>
       </section>
 
       <section className="mt-6 rounded-xl border border-violet/15 bg-violet/[.045] px-4 py-3 text-sm leading-6 text-ink/60">
-        <span className="font-semibold text-ink">Personalized defaults:</span> {intelligence.profile.explicitPreferences.guidanceMode} guidance, {intelligence.profile.explicitPreferences.questIntensity} weekly pace. You can override every saved suggestion below.
+        <span className="font-semibold text-ink">Founder context applied:</span> saved interests, experience, time, and risk preferences are reused where available. You can override them for this project.
       </section>
 
       <form id="founder-generate-form" action={generateFounderProject} className="mt-8 rounded-[1.5rem] border border-ink/10 bg-white p-6 shadow-card sm:p-8 lg:p-10">
@@ -59,12 +61,12 @@ export default async function GeneratePage({ searchParams }: { searchParams: Pro
 
         <div className="grid gap-x-6 gap-y-7 md:grid-cols-2">
           <Field label="What are you interested in?" hint="Pick a few areas. These guide the project direction.">
-            <Textarea name="interests" required minLength={2} placeholder="AI tools, student productivity, local business, content creation" />
+            <Textarea name="interests" required minLength={2} defaultValue={defaultInterests} placeholder="AI tools, student productivity, local business, content creation" />
             <GenerateFieldSuggestions field="interests" category="general_interests" suggestions={["AI tools", "Student productivity", "Sports training", "Local business", "Content creation"]} />
           </Field>
 
           <Field label="What skills do you have?" hint="Use commas or short phrases. This helps PrismForge choose a realistic test and MVP scope.">
-            <Textarea name="skills" required minLength={2} placeholder="coding, writing, research, sales, design" />
+            <Textarea name="skills" required minLength={2} defaultValue={defaultSkills} placeholder="coding, writing, research, sales, design" />
             <GenerateFieldSuggestions field="skills" category="general_skills" suggestions={["Coding", "Writing", "Research", "Sales", "Design"]} />
           </Field>
 

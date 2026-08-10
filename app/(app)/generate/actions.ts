@@ -26,6 +26,8 @@ export async function generateFounderProject(formData: FormData) {
   const profile = await requireProfile();
   const startedAt = Date.now();
   const raw = Object.fromEntries(formData.entries());
+  if (!String(raw.interests ?? "").trim() && profile.interests.length) raw.interests = profile.interests.join(", ");
+  if (!String(raw.skills ?? "").trim()) raw.skills = [profile.occupation, profile.education_level].filter(Boolean).join(", ");
   const requestId = parseRequestId(raw.generationRequestId);
 
   const duplicateState = await findGenerationStateForRequest(profile.id, requestId);
@@ -198,7 +200,7 @@ export async function generateFounderProject(formData: FormData) {
     errorCategory: historyError ? "optional_insert" : undefined,
   });
 
-  let params = new URLSearchParams({ message: "Your project is ready. Start with the Next Best Action." });
+  let params = new URLSearchParams({ message: "Your project is ready. Start with your Next Move." });
   try {
     const result = await trackUserAction({
       userId: profile.id,
@@ -214,7 +216,7 @@ export async function generateFounderProject(formData: FormData) {
     }
     if ("leveledUp" in result && result.leveledUp) params.set("levelUp", String(result.levelAfter));
   } catch {
-    params = new URLSearchParams({ message: "Your project is ready. Start with the Next Best Action." });
+    params = new URLSearchParams({ message: "Your project is ready. Start with your Next Move." });
   }
 
   await logAuditEvent({

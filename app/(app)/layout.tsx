@@ -4,6 +4,7 @@ import { AppNavigation } from "@/components/app-navigation";
 import { BetaFeedbackButton } from "@/components/beta-feedback-button";
 import { ProjectSwitcher } from "@/components/founder-os/project-switcher";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { logout } from "@/app/(auth)/actions";
 import { requireProfile } from "@/lib/auth";
 import { canAccessAdmin } from "@/lib/admin";
@@ -30,11 +31,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const planLabel = entitlements.reason === "lifetime_founder" ? "Lifetime Founder" : entitlements.reason === "beta_founder" ? "Founder beta" : entitlements.reason === "trial" ? "Trial" : entitlements.effectivePlan;
 
   return (
-    <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
+    <div className="min-h-screen bg-cream/70 lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
       <aside className="border-b border-ink/10 bg-white/90 backdrop-blur-xl lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
         <div className="flex min-h-20 items-center justify-between px-5 lg:px-6">
           <Logo />
-          <span className="rounded-full border border-ink/10 bg-cream px-2.5 py-1 text-[.625rem] font-bold uppercase tracking-[.1em] text-ink/55">{planLabel}</span>
+          <div className="flex items-center gap-2">
+            <ThemeToggle compact />
+            <span className="hidden rounded-full border border-ink/10 bg-cream px-2.5 py-1 text-[.625rem] font-bold uppercase tracking-[.1em] text-ink/55 xl:inline-flex">{planLabel}</span>
+          </div>
         </div>
         <div className="hidden px-4 lg:block">
           <ProjectSwitcher projects={switcherProjects} currentProjectId={focus?.project_id ?? null} />
@@ -69,10 +73,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="min-w-0">
         <header className="hidden min-h-16 items-center justify-between border-b border-ink/10 bg-white/55 px-8 backdrop-blur-xl lg:flex">
           <p className="text-sm font-medium text-ink/45">Make one decision. Test it in the real world.</p>
-          <BetaFeedbackButton />
+          <div className="flex items-center gap-3"><span className="rounded-full border border-ink/10 bg-cream/70 px-3 py-1.5 text-[.6875rem] font-bold uppercase tracking-[.12em] text-ink/50">{planLabel}</span><BetaFeedbackButton /></div>
         </header>
         <div className="border-b border-ink/10 bg-white/55 px-5 py-3 backdrop-blur lg:hidden"><BetaFeedbackButton /></div>
-        <main className="mx-auto max-w-[90rem] px-5 py-9 lg:px-10 lg:py-14 xl:px-14">{children}</main>
+        <main className="w-full max-w-none px-5 py-8 lg:px-8 lg:py-10 xl:px-10">{children}</main>
       </div>
     </div>
   );

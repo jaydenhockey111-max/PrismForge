@@ -23,12 +23,12 @@ export default async function HomePage() {
       <section className="paper-grid border-b border-ink/10">
         <div className="mx-auto grid max-w-7xl gap-16 px-5 py-20 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:px-8 lg:py-32">
           <div className="max-w-3xl">
-            <p className="eyebrow inline-flex items-center gap-2"><Compass className="size-4" />A practical founder workspace</p>
+            <p className="eyebrow inline-flex items-center gap-2"><Compass className="size-4" />Evidence-aware founder guidance</p>
             <h1 className="mt-6 font-display text-5xl font-semibold leading-[.96] tracking-[-.055em] text-ink sm:text-7xl">
-              Stop circling the idea. Test what matters.
+              Always know your next move.
             </h1>
             <p className="mt-8 max-w-2xl text-lg leading-8 text-ink/62">
-              {APP_NAME} turns a vague business idea into one clear uncertainty, one realistic test, and one useful next action—then keeps the evidence organized as you learn.
+              {APP_NAME} remembers what you are building, learns from what actually happens, and tells you exactly what to do next—or helps you do it.
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
               <ButtonLink href="/start" className="gap-2">Start your first project <ArrowRight className="size-4" /></ButtonLink>
@@ -59,7 +59,7 @@ export default async function HomePage() {
                 </div>
                 <div className="rounded-2xl border border-violet/15 bg-violet/[.055] p-5">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-bold uppercase tracking-[.15em] text-violet">Next action</p>
+                    <p className="text-xs font-bold uppercase tracking-[.15em] text-violet">Your Next Move</p>
                     <span className="text-xs font-semibold text-ink/45">20 min</span>
                   </div>
                   <p className="mt-3 text-sm font-semibold leading-6 text-ink/75">
@@ -81,7 +81,7 @@ export default async function HomePage() {
           <div className="max-w-xl">
             <p className="eyebrow">The core loop</p>
             <h2 className="mt-4 font-display text-4xl font-semibold leading-[1.05] tracking-[-.04em] text-ink sm:text-5xl">
-              From rough idea to useful evidence in one sitting.
+              Understand, act, learn, then decide again.
             </h2>
             <p className="mt-6 leading-7 text-ink/58">
               Each step removes uncertainty. Nothing is labeled validated just because a plan exists.

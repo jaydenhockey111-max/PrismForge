@@ -14,7 +14,6 @@ export function LaunchCommandCenter({
   projectId,
   title,
   status,
-  score,
   businessType,
   targetCustomer,
   report,
@@ -25,7 +24,6 @@ export function LaunchCommandCenter({
   projectId: string;
   title: string;
   status: ProjectStatus;
-  score?: number | null;
   businessType: BusinessType;
   targetCustomer: string;
   report: OpportunityReport;
@@ -46,8 +44,8 @@ export function LaunchCommandCenter({
   }, [validationProof]);
 
   const input = useMemo(
-    () => ({ title, status, score, businessType, targetCustomer, report, sprintTasks, validationProof: liveValidationProof, validationBlockers }),
-    [businessType, liveValidationProof, report, score, sprintTasks, status, targetCustomer, title, validationBlockers],
+    () => ({ title, status, businessType, targetCustomer, report, sprintTasks, validationProof: liveValidationProof, validationBlockers }),
+    [businessType, liveValidationProof, report, sprintTasks, status, targetCustomer, title, validationBlockers],
   );
   const readiness = useMemo(() => calculateLaunchReadiness(input, checkedItems), [checkedItems, input]);
 
@@ -139,16 +137,10 @@ export function LaunchCommandCenter({
       <div className="mt-6 grid gap-5 xl:grid-cols-[360px_1fr]">
         <div className="grid gap-5">
           <div className="rounded-[1.75rem] border border-ink/10 bg-gradient-to-br from-cream to-lime/20 p-5">
-            <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Launch readiness</p>
-            <div className="mt-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="font-display text-6xl font-semibold">{readiness.score}</p>
-                <p className="text-sm font-black uppercase tracking-[.12em] text-ink/45">/100</p>
-              </div>
+            <p className="text-xs font-black uppercase tracking-[.16em] text-moss">Launch evidence</p>
+            <div className="mt-4 flex items-start justify-between gap-4">
+              <div><p className="font-display text-3xl font-semibold">{readiness.label}</p><p className="mt-2 text-sm font-semibold text-ink/55">{readiness.completedCount} of {readiness.totalCount} factual checks marked complete</p></div>
               <CheckCircle2 className="size-10 text-moss" />
-            </div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-white">
-              <div className="h-full rounded-full bg-gradient-to-r from-violet via-moss to-gold transition-all duration-700" style={{ width: `${readiness.score}%` }} />
             </div>
           </div>
 
@@ -209,7 +201,7 @@ export function LaunchCommandCenter({
             <CopyPanel
               icon={<ClipboardList className="size-5" />}
               title="Copy Launch Plan"
-              description="Includes score, verdict, blockers, checklist progress, next action, channel, and invite."
+              description="Includes the verdict, factual blockers, checklist progress, Next Move, channel, and invite."
               buttonLabel="Copy Launch Plan"
               onCopy={() => copyValue(readiness.launchPlan)}
             />

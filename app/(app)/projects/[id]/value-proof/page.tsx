@@ -123,7 +123,7 @@ export default async function ProjectValueProofPage({ params }: { params: Promis
         </div>
 
         <div className="rounded-[1.5rem] border border-ink/10 bg-white p-5 shadow-sm">
-          <h2 className="font-display text-3xl font-semibold text-ink">Next Best Action</h2>
+          <h2 className="font-display text-3xl font-semibold text-ink">Next Move</h2>
           <div className="mt-5 grid gap-3 text-sm leading-6 text-ink/65">
             <Info label="Action" value={valueProof.nextBestAction.action} />
             <Info label="Why now" value={valueProof.nextBestAction.whyNow} />

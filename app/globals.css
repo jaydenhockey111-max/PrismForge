@@ -2,37 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+html[data-theme="light"] {
   color-scheme: light;
   --font-sans: "Segoe UI Variable", "Aptos", "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Segoe UI Variable Display", "Aptos Display", "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --canvas: #f5f4f0;
-  --surface: #fff;
-  --surface-muted: #efeee9;
+  --color-ink: 24 26 25;
+  --color-cream: 245 244 240;
+  --color-moss: 49 105 75;
+  --color-lime: 232 242 223;
+  --color-coral: 217 92 70;
+  --color-violet: 98 85 231;
+  --color-gold: 231 189 88;
+  --color-sky: 220 238 242;
+  --canvas: #f3f1eb;
+  --surface: #fffefa;
+  --surface-rgb: 255 254 250;
+  --surface-muted: #ebe9e1;
   --line: rgba(24, 26, 25, .11);
   --muted: rgba(24, 26, 25, .62);
   --accent: #6255e7;
+  --action-bg: #181a19;
+  --shadow-card: inset 0 1px 0 rgba(255,255,255,.95), 0 1px 2px rgba(24,26,25,.05), 0 12px 32px rgba(24,26,25,.07);
+  --shadow-glow: inset 0 1px 0 rgba(255,255,255,.18), 0 2px 5px rgba(24,26,25,.10), 0 18px 48px rgba(24,26,25,.12);
+  --backdrop:
+    radial-gradient(circle at 78% 8%, rgba(98,85,231,.12), transparent 25rem),
+    radial-gradient(circle at 12% 34%, rgba(49,105,75,.10), transparent 24rem),
+    radial-gradient(circle at 70% 88%, rgba(231,189,88,.12), transparent 28rem);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-ink: 235 238 235;
+  --color-cream: 12 15 18;
+  --color-moss: 108 199 144;
+  --color-lime: 27 55 40;
+  --color-coral: 244 127 103;
+  --color-violet: 145 132 255;
+  --color-gold: 240 192 91;
+  --color-sky: 27 55 65;
+  --canvas: #0c0f12;
+  --surface: #15191d;
+  --surface-rgb: 21 25 29;
+  --surface-muted: #1c2126;
+  --line: rgba(235,238,235,.12);
+  --muted: rgba(235,238,235,.64);
+  --accent: #9184ff;
+  --action-bg: #28243d;
+  --shadow-card: inset 0 1px 0 rgba(255,255,255,.055), 0 1px 2px rgba(0,0,0,.25), 0 18px 48px rgba(0,0,0,.24);
+  --shadow-glow: inset 0 1px 0 rgba(255,255,255,.08), 0 4px 12px rgba(0,0,0,.3), 0 24px 72px rgba(0,0,0,.34);
+  --backdrop:
+    radial-gradient(circle at 78% 5%, rgba(112,92,255,.22), transparent 28rem),
+    radial-gradient(circle at 8% 38%, rgba(56,148,101,.18), transparent 25rem),
+    radial-gradient(circle at 72% 92%, rgba(219,160,53,.13), transparent 30rem);
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,.65), transparent 18rem), var(--canvas);
-  color: #181a19;
+  min-height: 100vh;
+  background: var(--backdrop), var(--canvas);
+  color: rgb(var(--color-ink));
   text-rendering: optimizeLegibility;
+  transition: background-color .2s ease, color .2s ease;
 }
-::selection { background: rgba(98, 85, 231, .22); color: #181a19; }
+::selection { background: rgba(98, 85, 231, .32); color: rgb(var(--color-ink)); }
 
 .paper-grid {
   background:
-    linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.25)),
-    linear-gradient(rgba(24,26,25,.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(24,26,25,.032) 1px, transparent 1px);
+    linear-gradient(180deg, rgb(var(--surface-rgb) / .88), rgb(var(--surface-rgb) / .2)),
+    linear-gradient(rgb(var(--color-ink) / .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--color-ink) / .04) 1px, transparent 1px);
   background-size: auto, 48px 48px, 48px 48px;
 }
 
 .aurora-card {
-  background: linear-gradient(180deg, #fff, #fbfaf7);
+  background: linear-gradient(180deg, var(--surface), var(--surface-muted));
 }
 
 .dopamine-card {
@@ -64,16 +109,18 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(180deg, rgba(255,255,255,.12), transparent 44%);
+  background: linear-gradient(180deg, rgb(var(--surface-rgb) / .18), transparent 44%);
 }
 
 @layer components {
   .surface {
-    @apply rounded-[1.5rem] border border-ink/10 bg-white shadow-card;
+    @apply rounded-[1.5rem] border border-ink/10 shadow-card;
+    background-color: var(--surface);
   }
 
   .surface-flat {
-    @apply rounded-[1.5rem] border border-ink/10 bg-white;
+    @apply rounded-[1.5rem] border border-ink/10;
+    background-color: var(--surface);
   }
 
   .eyebrow {
@@ -90,6 +137,52 @@ body {
 
   .section-title {
     @apply font-display text-3xl font-semibold tracking-[-.025em] text-ink;
+  }
+}
+
+html[data-theme="dark"] .bg-white { background-color: var(--surface); }
+html[data-theme="dark"] .bg-white\/5 { background-color: rgb(var(--surface-rgb) / .05); }
+html[data-theme="dark"] .bg-white\/10 { background-color: rgb(var(--surface-rgb) / .10); }
+html[data-theme="dark"] .bg-white\/55 { background-color: rgb(var(--surface-rgb) / .55); }
+html[data-theme="dark"] .bg-white\/70 { background-color: rgb(var(--surface-rgb) / .70); }
+html[data-theme="dark"] .bg-white\/80 { background-color: rgb(var(--surface-rgb) / .80); }
+html[data-theme="dark"] .bg-white\/82 { background-color: rgb(var(--surface-rgb) / .82); }
+html[data-theme="dark"] .bg-white\/85 { background-color: rgb(var(--surface-rgb) / .85); }
+html[data-theme="dark"] .bg-white\/90 { background-color: rgb(var(--surface-rgb) / .90); }
+html[data-theme="dark"] .from-white {
+  --tw-gradient-from: var(--surface) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(var(--surface-rgb) / 0) var(--tw-gradient-to-position);
+}
+html[data-theme="dark"] .via-white {
+  --tw-gradient-to: rgb(var(--surface-rgb) / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--surface) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+html[data-theme="dark"] .to-white { --tw-gradient-to: var(--surface) var(--tw-gradient-to-position); }
+html[data-theme="dark"] .bg-ink,
+html[data-theme="dark"] .hover\:bg-ink:hover { background-color: var(--action-bg); }
+html[data-theme="dark"] .from-ink {
+  --tw-gradient-from: var(--action-bg) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(40 36 61 / 0) var(--tw-gradient-to-position);
+}
+html[data-theme="dark"] .via-ink {
+  --tw-gradient-to: rgb(40 36 61 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--action-bg) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+.project-report-rail { scrollbar-color: rgb(var(--color-violet) / .45) transparent; }
+
+@media (min-width: 1024px) {
+  .project-report-rail {
+    display: flex;
+    gap: 1.25rem;
+    overflow-x: auto;
+    padding: .25rem .25rem 1rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .project-report-panel {
+    min-width: min(70vw, 54rem);
+    scroll-snap-align: start;
   }
 }
 

@@ -8,18 +8,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#181a19",
-        cream: "#f5f4f0",
-        moss: "#31694b",
-        lime: "#e8f2df",
-        coral: "#d95c46",
-        violet: "#6255e7",
-        gold: "#e7bd58",
-        sky: "#dceef2",
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        cream: "rgb(var(--color-cream) / <alpha-value>)",
+        moss: "rgb(var(--color-moss) / <alpha-value>)",
+        lime: "rgb(var(--color-lime) / <alpha-value>)",
+        coral: "rgb(var(--color-coral) / <alpha-value>)",
+        violet: "rgb(var(--color-violet) / <alpha-value>)",
+        gold: "rgb(var(--color-gold) / <alpha-value>)",
+        sky: "rgb(var(--color-sky) / <alpha-value>)",
       },
       boxShadow: {
-        card: "inset 0 1px 0 rgba(255,255,255,.95), 0 1px 2px rgba(24,26,25,.05), 0 12px 32px rgba(24,26,25,.07)",
-        glow: "inset 0 1px 0 rgba(255,255,255,.18), 0 2px 5px rgba(24,26,25,.10), 0 18px 48px rgba(24,26,25,.12)",
+        card: "var(--shadow-card)",
+        glow: "var(--shadow-glow)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "sans-serif"],

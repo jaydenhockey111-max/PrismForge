@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ArrowRight, ArrowUpRight, CheckCircle2, FolderKanban, HelpCircle, MessageCircle, Rocket, Trophy, Users } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { BetaGuideLauncher } from "@/components/beta-guide-launcher";
 import { ProjectStatusBadge } from "@/components/founder-os/project-status-badge";
 import { LifecycleBadge } from "@/components/founder-os/project-lifecycle-controls";
-import { RewardChestReveal } from "@/components/reward-chest-reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
 import { logBetaEvent } from "@/lib/analytics/betaEvents";
 import { requireProfile } from "@/lib/auth";
-import type { BusinessType, ProjectStatus } from "@/lib/founder-os/types";
-import { BUSINESS_TYPE_LABELS, PROJECT_STATUSES } from "@/lib/founder-os/helpers";
+import type { ProjectDecision, ProjectOutput, ProjectValidationExperiment, ValidationPathRow } from "@/lib/database.types";
+import { BUSINESS_TYPE_LABELS } from "@/lib/founder-os/helpers";
+import { buildNextMove } from "@/lib/founder-os/nextMove";
+import type { BusinessType, OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
+import { routeValidationPath, type FounderValidationPreference, type ValidationPathHistoryInput, type ValidationRoutingResult } from "@/lib/founder-os/validationReadiness";
 import { getSafeDisplayProjectTitle } from "@/lib/founder-os/titleQuality";
-import { levelProgress } from "@/lib/gamification/config";
+import { summarizeProof } from "@/lib/proof-board";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard" };
@@ -21,44 +23,44 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ message?: string; error?: string; chest?: string; reward?: string; rewardDescription?: string; levelUp?: string }>;
+  searchParams: Promise<{ message?: string; error?: string }>;
 }) {
   const [profile, params, supabase] = await Promise.all([requireProfile(), searchParams, createClient()]);
   await logBetaEvent({ userId: profile.id, eventName: "dashboard_viewed", source: "dashboard", throttleSeconds: 15 * 60 });
   const db = supabase as any;
   const issues: string[] = [];
-  const [recentProjects, totalProjects, statusCounts, xpRow, focusRow, activeProjectCount] = await Promise.all([
-    safeRows(db.from("opportunity_projects").select("id,title,business_type,target_customer,score,status,lifecycle_status,last_meaningful_activity_at,updated_at,report_json").eq("user_id", profile.id).is("deleted_at", null).order("last_meaningful_activity_at", { ascending: false }).limit(6), issues),
+  const [recentProjects, totalProjects, focusRow, activeProjectCount] = await Promise.all([
+    safeRows(db.from("opportunity_projects").select("id,title,business_type,target_customer,status,lifecycle_status,last_meaningful_activity_at,updated_at,report_json").eq("user_id", profile.id).is("deleted_at", null).order("last_meaningful_activity_at", { ascending: false }).limit(6), issues),
     safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).is("deleted_at", null), issues),
-    Promise.all(PROJECT_STATUSES.map(async (status) => [status, await safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).eq("lifecycle_status", "active").is("deleted_at", null).eq("status", status), issues)] as const)),
-    safeMaybeSingle(db.from("user_xp").select("*").eq("user_id", profile.id).maybeSingle(), issues),
     safeMaybeSingle<{ project_id?: string | null }>(db.from("founder_project_focus").select("project_id").eq("user_id", profile.id).maybeSingle(), issues),
     safeCount(db.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).eq("lifecycle_status", "active").is("deleted_at", null), issues),
   ]);
 
-  const counts = Object.fromEntries(statusCounts) as Record<ProjectStatus, number>;
   const safeRecentProjectsUnsorted = recentProjects.map((project: any) => ({ ...project, title: getSafeDisplayProjectTitle(project) }));
   if (focusRow?.project_id && !safeRecentProjectsUnsorted.some((project: any) => project.id === focusRow.project_id)) {
-    const focused = await safeMaybeSingle<any>(db.from("opportunity_projects").select("id,title,business_type,target_customer,score,status,lifecycle_status,last_meaningful_activity_at,updated_at,report_json").eq("id",focusRow.project_id).eq("user_id",profile.id).eq("lifecycle_status","active").is("deleted_at",null).maybeSingle(),issues);
+    const focused = await safeMaybeSingle<any>(db.from("opportunity_projects").select("id,title,business_type,target_customer,status,lifecycle_status,last_meaningful_activity_at,updated_at,report_json").eq("id",focusRow.project_id).eq("user_id",profile.id).eq("lifecycle_status","active").is("deleted_at",null).maybeSingle(),issues);
     if (focused) safeRecentProjectsUnsorted.unshift({ ...focused, title:getSafeDisplayProjectTitle(focused) });
   }
   const safeRecentProjects = [...safeRecentProjectsUnsorted].sort((a, b) => Number(b.id === focusRow?.project_id) - Number(a.id === focusRow?.project_id)).slice(0, 4);
+  const currentProject = safeRecentProjectsUnsorted.find((project: any) => project.id === focusRow?.project_id && project.lifecycle_status === "active")
+    ?? safeRecentProjectsUnsorted.find((project: any) => project.lifecycle_status === "active")
+    ?? null;
+  const nextMove = currentProject ? await getFocusedNextMove(db, profile.id, currentProject, issues) : null;
   const name = profile.name?.split(" ")[0] ?? "founder";
-  const totalXp = Number((xpRow as { total_xp?: number | null } | null)?.total_xp ?? 0);
-  const progress = levelProgress(totalXp);
-  const nextMove = getDashboardNextMove({
-    totalProjects,
-    recentProjectId: focusRow?.project_id ?? safeRecentProjects.find((project: any) => project.lifecycle_status === "active")?.id,
-    validating: counts.validating ?? 0,
-    building: counts.building ?? 0,
-    launched: counts.launched ?? 0,
-  });
+  const dashboardMove: DashboardMove = nextMove ? {
+    title: nextMove.title,
+    description: nextMove.why,
+    doneWhen: nextMove.doneWhen,
+    whatChanged: nextMove.whatChanged,
+    evidenceState: nextMove.evidenceState,
+    href: `/projects/${currentProject.id}?section=today#next-move`,
+    cta: "Open your Next Move",
+  } : getDashboardNextMove({ totalProjects, recentProjectId: currentProject?.id });
   const isFirstTime = totalProjects === 0;
   if (!isFirstTime && activeProjectCount === 0) await logBetaEvent({ userId: profile.id, eventName: "no_active_project_state_viewed", source: "dashboard", metadata: { total_projects: totalProjects }, throttleSeconds: 15 * 60 });
 
   return (
     <div>
-      <RewardChestReveal reward={params.chest ? params.reward : undefined} description={params.rewardDescription} level={params.levelUp} />
       <FormMessage message={params.message} type="success" />
       <FormMessage message={params.error ?? (issues.length ? "Some dashboard data could not load. If this is a fresh install, run the latest Supabase migration." : undefined)} />
 
@@ -69,19 +71,20 @@ export default async function DashboardPage({
             <h1 className="mt-3 font-display text-4xl font-semibold tracking-[-.04em] text-ink sm:text-5xl">Welcome back, {name}.</h1>
             <div className="mt-8 max-w-3xl border-l-2 border-violet pl-5">
               <p className="text-sm font-bold text-violet">Your next move</p>
-              <h2 className="mt-2 font-display text-2xl font-semibold tracking-[-.025em] text-ink sm:text-3xl">{nextMove.title}</h2>
-              <p className="mt-3 max-w-2xl leading-7 text-ink/60">{nextMove.description}</p>
+               <h2 className="mt-2 font-display text-3xl font-semibold tracking-[-.025em] text-ink sm:text-4xl">{dashboardMove.title}</h2>
+               <p className="mt-3 max-w-2xl leading-7 text-ink/60">{dashboardMove.description}</p>
+               {dashboardMove.doneWhen && <p className="mt-4 max-w-2xl rounded-2xl bg-cream/70 p-4 text-sm font-semibold leading-6 text-ink/65"><span className="font-black text-ink">Done when:</span> {dashboardMove.doneWhen}</p>}
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href={nextMove.href} className="gap-2">{nextMove.cta}<ArrowRight className="size-4" /></ButtonLink>
+               <ButtonLink href={dashboardMove.href} className="gap-2">{dashboardMove.cta}<ArrowRight className="size-4" /></ButtonLink>
               {!isFirstTime && <ButtonLink href="/projects" variant="secondary">View projects</ButtonLink>}
               <BetaGuideLauncher compactButton />
             </div>
           </div>
           <div className="border-t border-ink/10 bg-cream/65 p-7 lg:border-l lg:border-t-0 lg:p-8">
-            <p className="text-xs font-bold uppercase tracking-[.16em] text-ink/40">Working principle</p>
-            <p className="mt-4 font-display text-xl font-semibold leading-7 tracking-[-.02em] text-ink">One project. One uncertainty. One real-world action.</p>
-            <p className="mt-4 text-sm leading-6 text-ink/55">Small, recorded tests create better decisions than more planning.</p>
+             <p className="text-xs font-bold uppercase tracking-[.16em] text-ink/40">Since you were last here</p>
+             <p className="mt-4 text-sm font-semibold leading-6 text-ink/65">{dashboardMove.whatChanged ?? "No material project outcome has been recorded yet."}</p>
+             {dashboardMove.evidenceState && <p className="mt-4 rounded-xl bg-white p-3 text-xs font-bold leading-5 text-moss">{dashboardMove.evidenceState}</p>}
           </div>
         </div>
       </section>
@@ -89,31 +92,10 @@ export default async function DashboardPage({
       {!profile.onboarding_completed && (
         <section className="mt-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5">
           <p className="font-bold text-amber-950">Quick setup recommended.</p>
-          <p className="mt-1 text-sm leading-6 text-amber-900">Your profile helps PrismForge personalize project reports and next actions.</p>
+          <p className="mt-1 text-sm leading-6 text-amber-900">Your profile helps PrismForge personalize project reports and Next Moves.</p>
           <ButtonLink href="/settings" variant="secondary" className="mt-4">Finish settings</ButtonLink>
         </section>
       )}
-
-      <section className="mt-8">
-        <div className="surface p-6">
-          <p className="eyebrow">One simple loop</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {["Open one project", "Test the biggest question", "Record what happened", "Use the updated action"].map((step, index) => (
-              <div key={step} className="flex gap-3 rounded-xl border border-ink/[.07] bg-cream/55 p-4">
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white text-xs font-bold text-violet shadow-sm">{index + 1}</span>
-                <p className="pt-0.5 text-sm font-semibold leading-6 text-ink/70">{step}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <details className="surface mt-8 p-5"><summary className="cursor-pointer text-sm font-bold text-violet">Open activity overview</summary><section className="mt-5 grid gap-4 border-t border-ink/10 pt-5 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={<FolderKanban className="size-5" />} label="Active projects" value={activeProjectCount} detail={`${totalProjects} preserved across your project library`} tone="sky" />
-        <StatCard icon={<Trophy className="size-5" />} label="Founder level" value={progress.level} detail={`${totalXp} XP from meaningful actions`} tone="gold" />
-        <StatCard icon={<Rocket className="size-5" />} label="Building/launched" value={(counts.building ?? 0) + (counts.launched ?? 0)} detail="Projects that moved beyond idea mode" tone="lime" />
-        <StatCard icon={<Users className="size-5" />} label="Validation focus" value={counts.validating ?? 0} detail="Projects currently proving the pain" tone="violet" />
-      </section></details>
 
       <section className="mt-10">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -147,75 +129,65 @@ export default async function DashboardPage({
         )}
       </section>
 
-      <section className="mt-10 grid gap-4 md:grid-cols-3">
-        <QuickLink href="/help/faq" icon={<HelpCircle className="size-5" />} title="Not sure what something means?" text="Read the FAQ before getting lost in the interface." />
-        <QuickLink href="/beta-guide" icon={<CheckCircle2 className="size-5" />} title="Testing PrismForge?" text="Use the beta guide for the recommended test flow." />
-        <QuickLink href="/help" icon={<MessageCircle className="size-5" />} title="Something confusing or broken?" text="Send beta support a clear note or use the feedback button." />
-      </section>
     </div>
   );
 }
 
-function StatCard({ icon, label, value, detail, tone }: { icon: React.ReactNode; label: string; value: string | number; detail: string; tone: "sky" | "gold" | "lime" | "violet" }) {
-  const tones = {
-    sky: "bg-sky/35 border-blue-100",
-    gold: "bg-gold/20 border-gold/30",
-    lime: "bg-lime/30 border-moss/15",
-    violet: "bg-violet/10 border-violet/15",
-  };
-  return (
-    <div className={`rounded-xl border p-5 ${tones[tone]}`}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[.14em] text-ink/65">{label}</p>
-        <div className="grid size-10 place-items-center rounded-xl bg-white/80 text-violet shadow-sm">{icon}</div>
-      </div>
-      <p className="mt-5 font-display text-4xl font-semibold tracking-tight text-ink">{value}</p>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink/60">{detail}</p>
-    </div>
-  );
-}
+type DashboardMove = { title: string; description: string; href: string; cta: string; doneWhen?: string; whatChanged?: string; evidenceState?: string };
 
-function QuickLink({ href, icon, title, text }: { href: string; icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <Link href={href} className="group surface-flat p-5 transition hover:-translate-y-px hover:border-ink/20 hover:shadow-card">
-      <div className="grid size-10 place-items-center rounded-xl bg-violet/10 text-violet">{icon}</div>
-      <h3 className="mt-4 font-display text-xl font-semibold tracking-[-.02em] text-ink">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-ink/60">{text}</p>
-    </Link>
-  );
-}
-
-function getDashboardNextMove(input: { totalProjects: number; recentProjectId?: string; validating: number; building: number; launched: number }) {
+function getDashboardNextMove(input: { totalProjects: number; recentProjectId?: string }): DashboardMove {
   if (input.totalProjects === 0) {
     return {
       title: "Create your first project.",
-      description: "Use one idea. PrismForge will turn it into a report, validation plan, and project workspace.",
+      description: "Tell PrismForge what you are building. You will get one clear action and a way to record what happens.",
+      doneWhen: "The project is saved and its first Next Move is visible.",
+      whatChanged: "There is no project history yet.",
+      evidenceState: "No external evidence recorded yet",
       href: "/generate",
       cta: "Create your first project",
     };
   }
-  if (input.validating + input.building + input.launched === 0 && input.recentProjectId) {
-    return {
-      title: "Move one project into validation.",
-      description: "Open your newest project, read the Next Best Action, and start one Proof Board experiment.",
-      href: `/projects/${input.recentProjectId}`,
-      cta: "Open newest project",
-    };
-  }
   if (input.recentProjectId) {
     return {
-      title: "Log one real-world signal.",
-      description: "Contact people outside the app, then add replies, pain confirmation, waitlist interest, or payment intent to Proof Board.",
-      href: `/projects/${input.recentProjectId}`,
-      cta: "Resume project",
+      title: "Open the project and confirm its current Next Move.",
+      description: "PrismForge needs the saved project context before it can show the evidence-aware recommendation here.",
+      href: `/projects/${input.recentProjectId}?section=today`,
+      cta: "Open project",
     };
   }
   return {
-    title: "Open your projects.",
-    description: "Pick one idea and make one small validation move.",
+    title: "Choose one current project.",
+    description: "Set a current focus so Today can show one project-specific Next Move.",
     href: "/projects",
-    cta: "Open projects",
+    cta: "Choose current focus",
   };
+}
+
+async function getFocusedNextMove(db: any, userId: string, project: any, issues: string[]) {
+  const report = project.report_json as OpportunityReport;
+  if (!report?.input || !report?.summary || !report?.mvpPlan) return null;
+
+  const [experiments, decisions, preference, paths, outputs] = await Promise.all([
+    safeRows(db.from("project_validation_experiments").select("*").eq("user_id", userId).eq("project_id", project.id).order("updated_at", { ascending: false }), issues),
+    safeRows(db.from("project_decisions").select("*").eq("user_id", userId).eq("project_id", project.id).order("created_at", { ascending: false }).limit(25), issues),
+    safeMaybeSingle<any>(db.from("founder_validation_preferences").select("preference").eq("user_id", userId).eq("project_id", project.id).maybeSingle(), issues),
+    safeRows(db.from("validation_paths").select("*").eq("user_id", userId).eq("project_id", project.id).order("created_at", { ascending: false }), issues),
+    safeRows(db.from("project_outputs").select("output_type").eq("user_id", userId).eq("project_id", project.id), issues),
+  ]);
+  const proofRows = experiments as ProjectValidationExperiment[];
+  const history = paths as ValidationPathRow[];
+  const active = history.find((path) => path.status === "active");
+  const route = routeValidationPath({
+    report,
+    status: project.status as ProjectStatus,
+    proof: summarizeProof(proofRows),
+    preference: (preference?.preference ?? null) as FounderValidationPreference | null,
+    experiments: proofRows,
+    outputs: outputs as ProjectOutput[],
+    pathHistory: history.map((path) => ({ path_type: path.path_type, status: path.status, source: path.source, created_at: path.created_at })) as ValidationPathHistoryInput[],
+    forcedPath: active?.path_type as ValidationRoutingResult["pathType"] | undefined,
+  });
+  return buildNextMove({ projectId: project.id, report, status: project.status as ProjectStatus, proof: summarizeProof(proofRows), route, experiments: proofRows, decisions: decisions as ProjectDecision[] });
 }
 
 async function safeRows(query: PromiseLike<{ data: any[] | null; error: { message?: string } | null }>, issues: string[]) {

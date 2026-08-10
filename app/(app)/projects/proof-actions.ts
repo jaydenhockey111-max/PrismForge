@@ -7,7 +7,7 @@ import { requireProfile } from "@/lib/auth";
 import type { ProjectValidationExperiment } from "@/lib/database.types";
 import type { OpportunityReport, ProjectStatus } from "@/lib/founder-os/types";
 import { recommendationFingerprint } from "@/lib/founder-os/coreLoop";
-import { routeValidationPath } from "@/lib/founder-os/validationReadiness";
+import { hasRecordedOutcome, routeValidationPath } from "@/lib/founder-os/validationReadiness";
 import { computeValidationConfidence, summarizeProof, validationExperimentInputSchema, type ProofSummary, type ValidationExperimentInput } from "@/lib/proof-board";
 import { reconcileProjectProgress, reverseExperimentProgress } from "@/lib/progress/server";
 import { createClient } from "@/lib/supabase/server";
@@ -44,9 +44,9 @@ export async function createValidationExperiment(projectId: string, input: Valid
   const supabase = await createClient();
   const project = await requireOwnedProject(supabase, profile.id, parsedProjectId.data);
   await requireOwnedValidationLinks(supabase, profile.id, parsedProjectId.data, parsed.data.validation_path_id, parsed.data.target_assumption_id);
-  const { data: existingProof, count: existingProofCount } = await supabase
+  const { data: existingProof } = await supabase
     .from("project_validation_experiments")
-    .select("*", { count: "exact" })
+    .select("*")
     .eq("project_id", parsedProjectId.data)
     .eq("user_id", profile.id);
   const payload = normalizePayload(parsed.data);
@@ -70,15 +70,6 @@ export async function createValidationExperiment(projectId: string, input: Valid
     source: "proof_board",
     metadata: { status: data.status, channel: data.channel, confidence_score: data.confidence_score },
   });
-  if ((existingProofCount ?? 0) === 0) {
-    await logBetaEvent({
-      userId: profile.id,
-      projectId: parsedProjectId.data,
-      eventName: "first_evidence_saved",
-      source: "proof_board",
-      metadata: { status: data.status, channel: data.channel, confidence_score: data.confidence_score },
-    });
-  }
   await applyEvidenceGuidanceUpdate({
     userId: profile.id,
     project,
@@ -284,14 +275,32 @@ async function applyEvidenceGuidanceUpdate({
   const beforeFingerprint = recommendationFingerprint({ assumptionKey: beforeRoute.targetAssumptionKey, action: beforeRoute.firstAction.action, evidenceType: beforeRoute.targetEvidenceType });
   const afterFingerprint = recommendationFingerprint({ assumptionKey: afterRoute.targetAssumptionKey, action: afterRoute.firstAction.action, evidenceType: afterRoute.targetEvidenceType });
   const assumptionStatus = evidenceStatus(currentExperiment);
+  const currentHasOutcome = hasRecordedOutcome(currentExperiment);
+  const beforeHadOutcome = before.some(hasRecordedOutcome);
+  const recommendationChanged = beforeFingerprint !== afterFingerprint;
   const admin = (await import("@/lib/supabase/admin")).createAdminClient();
 
   if (assumptionId) {
     await admin.from("project_assumptions").update({ status: assumptionStatus, source: "proof_board", updated_at: new Date().toISOString() }).eq("id", assumptionId).eq("project_id", project.id).eq("user_id", userId);
   }
-  await logBetaEvent({ userId, projectId: project.id, eventName: "core_loop_evidence_saved", source: "proof_board", metadata: { request_id: requestId ?? null, evidence_type: currentExperiment.evidence_type ?? "other", assumption_status: assumptionStatus } });
+  await logBetaEvent({ userId, projectId: project.id, eventName: "next_move_recalculated", source: "proof_board", metadata: { request_id: requestId ?? null, previous_path: beforeRoute.pathType, next_path: afterRoute.pathType, changed: recommendationChanged, trigger: currentHasOutcome ? "outcome_recorded" : "experiment_updated" } });
 
-  if (beforeFingerprint !== afterFingerprint) {
+  if (!currentHasOutcome) return;
+
+  if (!beforeHadOutcome) {
+    await logBetaEvent({
+      userId,
+      projectId: project.id,
+      eventName: "first_evidence_saved",
+      source: "proof_board",
+      metadata: { status: currentExperiment.status, channel: currentExperiment.channel, evidence_type: currentExperiment.evidence_type ?? "other" },
+    });
+  }
+
+  await logBetaEvent({ userId, projectId: project.id, eventName: "core_loop_evidence_saved", source: "proof_board", metadata: { request_id: requestId ?? null, evidence_type: currentExperiment.evidence_type ?? "other", assumption_status: assumptionStatus } });
+  await logBetaEvent({ userId, projectId: project.id, eventName: "next_move_outcome_recorded", source: "proof_board", metadata: { request_id: requestId ?? null, evidence_type: currentExperiment.evidence_type ?? "other", assumption_status: assumptionStatus } });
+
+  if (recommendationChanged) {
     await logBetaEvent({ userId, projectId: project.id, eventName: "core_loop_recommendation_updated", source: "proof_board", metadata: { request_id: requestId ?? null, previous_path: beforeRoute.pathType, next_path: afterRoute.pathType, changed: true } });
     if (!project.is_synthetic) await logBetaEvent({ userId, projectId: project.id, eventName: "core_loop_completed", source: "proof_board", metadata: { request_id: requestId ?? null, synthetic: false } });
   }
