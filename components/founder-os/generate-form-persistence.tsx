@@ -1,41 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createProjectCreationProgressMessage, createProjectValidationMessage, PROJECT_CREATION_SLOW_AFTER_MS } from "@/lib/founder-os/createProjectFeedback";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { createProjectValidationMessage } from "@/lib/founder-os/createProjectFeedback";
 
 const STORAGE_KEY = "prismforge_generate_form_draft";
-const SUBMIT_EVENT = "prismforge:project-submit-clicked";
 const VALIDATION_EVENT = "prismforge:project-validation-blocked";
 
 export function GenerateFormPersistence({ formId }: { formId: string }) {
+  const { pending } = useFormStatus();
   const [status, setStatus] = useState<{ type: "info" | "error"; message: string } | null>(null);
+  const submitted = useRef(false);
+  const observedPending = useRef(false);
+  const submissionGuardTimeout = useRef<number | null>(null);
+
+  const clearSubmissionAttempt = useCallback(() => {
+    if (submissionGuardTimeout.current !== null) {
+      window.clearTimeout(submissionGuardTimeout.current);
+      submissionGuardTimeout.current = null;
+    }
+    submitted.current = false;
+    observedPending.current = false;
+    setStatus(null);
+  }, []);
+
+  useEffect(() => {
+    if (pending) {
+      observedPending.current = true;
+      if (submissionGuardTimeout.current !== null) {
+        window.clearTimeout(submissionGuardTimeout.current);
+        submissionGuardTimeout.current = null;
+      }
+      return;
+    }
+    if (observedPending.current) clearSubmissionAttempt();
+  }, [clearSubmissionAttempt, pending]);
 
   useEffect(() => {
     const form = document.getElementById(formId) as HTMLFormElement | null;
     if (!form) return;
     const activeForm = form;
-    let slowStatusTimeout: number | null = null;
-    let submitted = false;
     let dirty = false;
-
-    function clearSlowStatusTimeout() {
-      if (slowStatusTimeout !== null) {
-        window.clearTimeout(slowStatusTimeout);
-        slowStatusTimeout = null;
-      }
-    }
-
-    function armSlowStatusTimeout() {
-      clearSlowStatusTimeout();
-      slowStatusTimeout = window.setTimeout(() => {
-        setStatus({ type: "info", message: createProjectCreationProgressMessage(true) });
-        logClientEvent("project_creation_slow", {
-          source: "generate_form",
-          request_id: requestIdFor(activeForm),
-          threshold_ms: PROJECT_CREATION_SLOW_AFTER_MS,
-        });
-      }, PROJECT_CREATION_SLOW_AFTER_MS);
-    }
 
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -62,18 +67,17 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
     }
 
     function onSubmit(event: SubmitEvent) {
-      if (activeForm.dataset.submitting === "true") {
+      if (submitted.current) {
         event.preventDefault();
         setStatus({ type: "info", message: "PrismForge already received this click. Keep this tab open while the project finishes." });
         logClientEvent("duplicate_submission_blocked", { surface: "generate_form", request_id: requestIdFor(activeForm) });
         return;
       }
-      submitted = true;
-      activeForm.dataset.submitting = "true";
+      submitted.current = true;
       saveDraft();
-      setStatus({ type: "info", message: createProjectCreationProgressMessage(false) });
-      armSlowStatusTimeout();
-      window.dispatchEvent(new CustomEvent(SUBMIT_EVENT));
+      submissionGuardTimeout.current = window.setTimeout(() => {
+        if (!observedPending.current) clearSubmissionAttempt();
+      }, 1_000);
       const requestId = requestIdFor(activeForm);
       logClientEvent("project_creation_client_started", { source: "form_submit", request_id: requestId });
       logClientEvent("project_creation_request_sent", { source: "form_submit", request_id: requestId });
@@ -83,8 +87,7 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
 
     function onInvalid(event: Event) {
       const target = event.target as HTMLElement | null;
-      activeForm.dataset.submitting = "false";
-      clearSlowStatusTimeout();
+      submitted.current = false;
       const fieldName = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement ? target.name : "unknown";
       setStatus({ type: "error", message: createProjectValidationMessage(fieldName) });
       logClientEvent("project_creation_validation_failed", { field_key: fieldName, request_id: requestIdFor(activeForm) });
@@ -93,13 +96,12 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
 
     function onValidationBlocked(event: Event) {
       const field = event instanceof CustomEvent && typeof event.detail?.field === "string" ? event.detail.field : "unknown";
-      activeForm.dataset.submitting = "false";
-      clearSlowStatusTimeout();
+      submitted.current = false;
       setStatus({ type: "error", message: createProjectValidationMessage(field) });
     }
 
     function onBeforeUnload() {
-      if (!dirty || submitted) return;
+      if (!dirty || submitted.current) return;
       const payload = JSON.stringify({ eventName: "form_abandoned", metadata: { source: "generate_form" } });
       navigator.sendBeacon?.("/api/beta-events", new Blob([payload], { type: "application/json" }));
     }
@@ -110,19 +112,17 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
     activeForm.addEventListener("invalid", onInvalid, true);
     window.addEventListener(VALIDATION_EVENT, onValidationBlocked);
     window.addEventListener("beforeunload", onBeforeUnload);
-    window.addEventListener("pagehide", clearSlowStatusTimeout);
 
     return () => {
-      clearSlowStatusTimeout();
+      if (submissionGuardTimeout.current !== null) window.clearTimeout(submissionGuardTimeout.current);
       activeForm.removeEventListener("input", saveDraft);
       activeForm.removeEventListener("change", saveDraft);
       activeForm.removeEventListener("submit", onSubmit);
       activeForm.removeEventListener("invalid", onInvalid, true);
       window.removeEventListener(VALIDATION_EVENT, onValidationBlocked);
       window.removeEventListener("beforeunload", onBeforeUnload);
-      window.removeEventListener("pagehide", clearSlowStatusTimeout);
     };
-  }, [formId]);
+  }, [clearSubmissionAttempt, formId]);
 
   if (!status) return null;
   return (
