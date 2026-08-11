@@ -31,12 +31,18 @@ export async function requestOpenAiJson({
   if (!apiKey) throw taggedError("provider_auth", "AI provider credentials are not configured.");
 
   const startedAt = Date.now();
+  const deadlineAt = startedAt + timeoutMs;
   let attempts = 0;
   let lastError: unknown;
   while (attempts < 3) {
     attempts += 1;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const remainingMs = deadlineAt - Date.now();
+    if (remainingMs <= 0) throw taggedError("provider_timeout", "AI provider request timed out.", attempts - 1);
+    // The task timeout is a total budget, not a fresh budget for every retry.
+    // This keeps a failed provider call from turning an 18-second request into a
+    // 54-second wait before the reliable local fallback can take over.
+    const timeout = setTimeout(() => controller.abort(), remainingMs);
     try {
       const response = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
@@ -59,8 +65,7 @@ export async function requestOpenAiJson({
       if (!response.ok) {
         const retryable = response.status === 429 || response.status >= 500;
         if (retryable && attempts < 3) {
-          await retryDelay(attempts);
-          continue;
+          if (await retryDelayWithinBudget(attempts, deadlineAt)) continue;
         }
         throw taggedError(
           response.status === 429 ? "provider_rate_limit" : response.status >= 500 ? "provider_unavailable" : "provider_auth",
@@ -83,18 +88,20 @@ export async function requestOpenAiJson({
       };
     } catch (error) {
       lastError = error;
-      const transient = error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("fetch"));
-      if (transient && attempts < 3) {
-        await retryDelay(attempts);
+      if (isAbortError(error)) throw taggedError("provider_timeout", "AI provider request timed out.", attempts);
+      if (isTransportError(error)) {
+        if (attempts < 3 && await retryDelayWithinBudget(attempts, deadlineAt)) continue;
+        throw taggedError("provider_unavailable", "AI provider was unavailable.", attempts);
+      }
+      if (attempts < 3 && isRetryableStatus(error) && await retryDelayWithinBudget(attempts, deadlineAt)) {
         continue;
       }
-      if (error instanceof Error && error.name === "AbortError") throw taggedError("provider_timeout", "AI provider request timed out.");
       throw error;
     } finally {
       clearTimeout(timeout);
     }
   }
-  throw lastError ?? taggedError("provider_unavailable", "AI provider was unavailable.");
+  throw lastError ?? taggedError("provider_unavailable", "AI provider was unavailable.", attempts);
 }
 
 function extractResponseText(payload: OpenAIResponse) {
@@ -114,12 +121,30 @@ function parsePossiblyWrappedJson(text: string) {
   }
 }
 
-function taggedError(category: string, message: string) {
-  const error = new Error(message) as Error & { category?: string };
+function taggedError(category: string, message: string, attempts?: number) {
+  const error = new Error(message) as Error & { category?: string; attempts?: number };
   error.category = category;
+  if (attempts !== undefined) error.attempts = attempts;
   return error;
 }
 
-async function retryDelay(attempt: number) {
-  await new Promise((resolve) => setTimeout(resolve, 150 * (2 ** (attempt - 1))));
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function isTransportError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  if (error instanceof TypeError) return true;
+  return /\b(fetch|network|connect|socket|econn|enotfound|etimedout)\b/i.test(error.message);
+}
+
+function isRetryableStatus(error: unknown) {
+  return error instanceof Error && (error as Error & { category?: string }).category === "provider_unavailable";
+}
+
+async function retryDelayWithinBudget(attempt: number, deadlineAt: number) {
+  const delay = Math.min(150 * (2 ** (attempt - 1)), deadlineAt - Date.now());
+  if (delay <= 0) return false;
+  await new Promise((resolve) => setTimeout(resolve, delay));
+  return Date.now() < deadlineAt;
 }

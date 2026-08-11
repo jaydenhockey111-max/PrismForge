@@ -168,18 +168,26 @@ export async function executeAiTask<T>({
     return { value, mode: "openai", requestId, usage: providerResult.usage };
   } catch (error) {
     const category = getFailureCategory(error);
+    const attempts = getAttemptCount(error);
     await finalizeAiRequest({
       ledgerId: reservation.ledgerId,
       status: category === "provider_timeout" ? "reconciliation_needed" : "failed",
       usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0 },
       actualCostUsd: null,
-      attempts: 1,
+      attempts,
       latencyMs: Date.now() - startedAt,
       failureCategory: category,
       retryable: category === "provider_rate_limit" || category === "provider_unavailable",
     });
     return fallbackResult(safeFailureReason(error));
   }
+}
+
+function getAttemptCount(error: unknown) {
+  const attempts = error && typeof error === "object" && "attempts" in error
+    ? Number((error as { attempts?: unknown }).attempts)
+    : 1;
+  return Number.isInteger(attempts) && attempts > 0 ? attempts : 1;
 }
 
 function getFailureCategory(error: unknown): AiFailureCategory {
