@@ -11,6 +11,7 @@ const allowedClientEvents = new Set<BetaEventName>([
   "project_creation_request_sent",
   "project_creation_validation_failed",
   "project_creation_client_timeout",
+  "project_creation_slow",
   "duplicate_submission_blocked",
   "field_suggestion_viewed",
   "field_suggestion_clicked",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,18 +14,11 @@ export function SaveProjectButton() {
   const { pending } = useFormStatus();
   const [clicked, setClicked] = useState(false);
 
-  useEffect(() => {
-    if (pending) return;
-    const timeout = window.setTimeout(() => setClicked(false), 5_000);
-    return () => window.clearTimeout(timeout);
-  }, [pending, clicked]);
-
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     const form = event.currentTarget.form;
     if (form?.dataset.submitting === "true") {
       event.preventDefault();
       logClientEvent("duplicate_submission_blocked", { source: "submit_button" });
-      window.dispatchEvent(new CustomEvent(SUBMIT_EVENT, { detail: { duplicate: true } }));
       return;
     }
     if (form && !form.checkValidity()) {

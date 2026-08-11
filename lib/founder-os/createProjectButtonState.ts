@@ -1,3 +1,3 @@
-export function isCreateProjectSubmitDisabled({ pending }: { pending: boolean; clicked: boolean }) {
-  return pending;
+export function isCreateProjectSubmitDisabled({ pending, clicked }: { pending: boolean; clicked: boolean }) {
+  return pending || clicked;
 }

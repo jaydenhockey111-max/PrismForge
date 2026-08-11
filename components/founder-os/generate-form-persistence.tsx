@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createProjectValidationMessage } from "@/lib/founder-os/createProjectFeedback";
+import { createProjectCreationProgressMessage, createProjectValidationMessage, PROJECT_CREATION_SLOW_AFTER_MS } from "@/lib/founder-os/createProjectFeedback";
 
 const STORAGE_KEY = "prismforge_generate_form_draft";
 const SUBMIT_EVENT = "prismforge:project-submit-clicked";
 const VALIDATION_EVENT = "prismforge:project-validation-blocked";
-const SUBMIT_STUCK_TIMEOUT_MS = 90_000;
 
 export function GenerateFormPersistence({ formId }: { formId: string }) {
   const [status, setStatus] = useState<{ type: "info" | "error"; message: string } | null>(null);
@@ -15,25 +14,27 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
     const form = document.getElementById(formId) as HTMLFormElement | null;
     if (!form) return;
     const activeForm = form;
-    let stuckTimeout: number | null = null;
+    let slowStatusTimeout: number | null = null;
+    let submitted = false;
+    let dirty = false;
 
-    function clearStuckTimeout() {
-      if (stuckTimeout) {
-        window.clearTimeout(stuckTimeout);
-        stuckTimeout = null;
+    function clearSlowStatusTimeout() {
+      if (slowStatusTimeout !== null) {
+        window.clearTimeout(slowStatusTimeout);
+        slowStatusTimeout = null;
       }
     }
 
-    function armStuckTimeout() {
-      clearStuckTimeout();
-      stuckTimeout = window.setTimeout(() => {
-        activeForm.dataset.submitting = "false";
-        setStatus({
-          type: "error",
-          message: "PrismForge could not confirm the project finished. Your answers are still saved — please try again. Duplicate protection will reopen an already-created project instead of making copies.",
+    function armSlowStatusTimeout() {
+      clearSlowStatusTimeout();
+      slowStatusTimeout = window.setTimeout(() => {
+        setStatus({ type: "info", message: createProjectCreationProgressMessage(true) });
+        logClientEvent("project_creation_slow", {
+          source: "generate_form",
+          request_id: requestIdFor(activeForm),
+          threshold_ms: PROJECT_CREATION_SLOW_AFTER_MS,
         });
-        logClientEvent("project_creation_client_timeout", { source: "generate_form", timeout_ms: SUBMIT_STUCK_TIMEOUT_MS });
-      }, SUBMIT_STUCK_TIMEOUT_MS);
+      }, PROJECT_CREATION_SLOW_AFTER_MS);
     }
 
     try {
@@ -48,9 +49,6 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
     } catch {
       // Draft restoration is best-effort only.
     }
-
-    let submitted = false;
-    let dirty = false;
 
     function saveDraft() {
       const formData = new FormData(activeForm);
@@ -67,37 +65,36 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
       if (activeForm.dataset.submitting === "true") {
         event.preventDefault();
         setStatus({ type: "info", message: "PrismForge already received this click. Keep this tab open while the project finishes." });
-        logClientEvent("duplicate_submission_blocked", { surface: "generate_form" });
+        logClientEvent("duplicate_submission_blocked", { surface: "generate_form", request_id: requestIdFor(activeForm) });
         return;
       }
       submitted = true;
       activeForm.dataset.submitting = "true";
       saveDraft();
-      setStatus({ type: "info", message: "PrismForge received your click. Reviewing your answers and creating the project now..." });
-      armStuckTimeout();
+      setStatus({ type: "info", message: createProjectCreationProgressMessage(false) });
+      armSlowStatusTimeout();
       window.dispatchEvent(new CustomEvent(SUBMIT_EVENT));
-      logClientEvent("project_creation_client_started", { source: "form_submit" });
-      logClientEvent("project_creation_request_sent", { source: "form_submit" });
-      logClientEvent("project_creation_submit_clicked", { source: "form_submit" });
+      const requestId = requestIdFor(activeForm);
+      logClientEvent("project_creation_client_started", { source: "form_submit", request_id: requestId });
+      logClientEvent("project_creation_request_sent", { source: "form_submit", request_id: requestId });
+      logClientEvent("project_creation_submit_clicked", { source: "form_submit", request_id: requestId });
       logClientEvent("form_completed", { source: "generate_form" });
     }
 
     function onInvalid(event: Event) {
       const target = event.target as HTMLElement | null;
       activeForm.dataset.submitting = "false";
-      clearStuckTimeout();
+      clearSlowStatusTimeout();
       const fieldName = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement ? target.name : "unknown";
       setStatus({ type: "error", message: createProjectValidationMessage(fieldName) });
-      logClientEvent("project_creation_validation_failed", {
-        field_key: fieldName,
-      });
+      logClientEvent("project_creation_validation_failed", { field_key: fieldName, request_id: requestIdFor(activeForm) });
       window.setTimeout(() => target?.focus(), 0);
     }
 
     function onValidationBlocked(event: Event) {
       const field = event instanceof CustomEvent && typeof event.detail?.field === "string" ? event.detail.field : "unknown";
       activeForm.dataset.submitting = "false";
-      clearStuckTimeout();
+      clearSlowStatusTimeout();
       setStatus({ type: "error", message: createProjectValidationMessage(field) });
     }
 
@@ -113,15 +110,17 @@ export function GenerateFormPersistence({ formId }: { formId: string }) {
     activeForm.addEventListener("invalid", onInvalid, true);
     window.addEventListener(VALIDATION_EVENT, onValidationBlocked);
     window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", clearSlowStatusTimeout);
 
     return () => {
-      clearStuckTimeout();
+      clearSlowStatusTimeout();
       activeForm.removeEventListener("input", saveDraft);
       activeForm.removeEventListener("change", saveDraft);
       activeForm.removeEventListener("submit", onSubmit);
       activeForm.removeEventListener("invalid", onInvalid, true);
       window.removeEventListener(VALIDATION_EVENT, onValidationBlocked);
       window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", clearSlowStatusTimeout);
     };
   }, [formId]);
 
@@ -229,6 +228,11 @@ function applySuggestion(field: string, suggestion: string, append: boolean, cat
 function fieldValue(form: HTMLFormElement, name: string) {
   const field = form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
   return field?.value ?? "";
+}
+
+function requestIdFor(form: HTMLFormElement) {
+  const value = form.elements.namedItem("generationRequestId");
+  return value instanceof HTMLInputElement ? value.value : "";
 }
 
 function targetAudienceSuggestions(interests: string, idea: string) {

@@ -1,3 +1,17 @@
+export const PROJECT_CREATION_SLOW_AFTER_MS = 45_000;
+
+export function createProjectCreationProgressMessage(isSlow: boolean) {
+  return isSlow
+    ? "Still working — this is taking a little longer than usual."
+    : "PrismForge received your click. Reviewing your answers and creating the project now...";
+}
+
+export function createProjectCreationSuccessMessage(usedFallback: boolean) {
+  return usedFallback
+    ? "Your project is ready. PrismForge created a reliable starting version so you can keep going normally."
+    : "Your project is ready. Start with your Next Move.";
+}
+
 export function createProjectValidationMessage(field: string) {
   const labels: Record<string, string> = {
     interests: "Add at least one real interest or area you care about.",

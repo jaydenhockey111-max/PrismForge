@@ -1,54 +1,20 @@
-import { analyzeCompetitors } from "./competitorAnalyzer";
-import { createContentPlan } from "./contentEngine";
 import {
-  BUSINESS_TYPE_LABELS,
-  GOAL_LABELS,
   audienceLabel,
-  firstInterest,
   firstSkill,
   ideaLabel,
   productNoun,
-  projectSeed,
   projectTitle,
-  seededPick,
 } from "./helpers";
-import { createLandingPageCopy } from "./landingPageGenerator";
-import { createMarketValidation } from "./marketValidation";
-import { createMonetizationPlan } from "./monetizationPlanner";
-import { createMvpPlan } from "./mvpPlanner";
 import { createOpportunityScore } from "./opportunityScoring";
-import { createRoadmap } from "./roadmapGenerator";
 import type { OpportunityReport, UserOpportunityInput } from "./types";
 
 export function createMockOpportunityReport(input: UserOpportunityInput): OpportunityReport {
   const title = projectTitle(input);
   const audience = input.targetAudience.trim() || "ambitious beginners";
   const audienceLower = audienceLabel(input);
-  const interest = firstInterest(input);
   const skill = firstSkill(input);
   const noun = productNoun(input);
-  const typeLabel = BUSINESS_TYPE_LABELS[input.businessType].toLowerCase();
-  const seed = projectSeed(input);
   const idea = ideaLabel(input);
-  const founderGoal = GOAL_LABELS[input.goal].toLowerCase();
-  const urgency = seededPick(
-    [
-      "keep losing time to scattered advice and unfinished attempts",
-      "struggle to turn vague motivation into a clear weekly plan",
-      "need a faster way to decide what is worth building or buying",
-      "have enough intent to act, but not enough clarity to move confidently",
-    ],
-    `${seed}:urgency`,
-  );
-  const moneyAngle = seededPick(
-    [
-      "sell a focused shortcut to a painful, repeated workflow",
-      "package a clear outcome into a simple recurring product",
-      "start with a manual concierge version before automating the workflow",
-      "charge for speed, clarity, and accountability instead of generic advice",
-    ],
-    `${seed}:money-angle`,
-  );
 
   return {
     generatedAt: new Date().toISOString(),
@@ -56,20 +22,69 @@ export function createMockOpportunityReport(input: UserOpportunityInput): Opport
     score: createOpportunityScore(input),
     summary: {
       title,
-      oneSentenceIdea: `${idea} is a ${typeLabel} ${noun} for ${audienceLower} who want to make progress on ${interest} without guessing what to do next.`,
+      oneSentenceIdea: `${idea} is a starting ${noun} for ${audienceLower}.`,
       targetCustomer: audience,
-      painPoint: `${audience} ${urgency}, especially when they only have ${input.timePerWeek || 3} hours/week and need proof instead of more planning.`,
-      whyNow: `AI, no-code infrastructure, short-form distribution, and niche communities make it cheaper than ever for someone with ${skill} skills to validate a focused ${noun} quickly.`,
-      whyThisCouldMakeMoney: `The strongest path is to ${moneyAngle}. This fits the founder goal of ${founderGoal}.`,
-      businessModel: input.businessType === "local_service" ? "Paid setup/service packages with optional recurring support." : "Freemium entry point with paid Pro/Founder plans for repeated use, exports, and advanced workflows.",
+      painPoint: `The problem for ${audienceLower} still needs validation.`,
+      whyNow: `Use ${input.timePerWeek || 3} hours/week and your ${skill} skills to run a small test.`,
+      whyThisCouldMakeMoney: "Whether people will pay is not known yet.",
+      businessModel: "Start with a small paid pilot before choosing a pricing model.",
     },
-    marketValidation: createMarketValidation(input),
-    competitors: analyzeCompetitors(input),
-    mvpPlan: createMvpPlan(input),
-    monetizationPlan: createMonetizationPlan(input),
-    contentPlan: createContentPlan(input),
-    landingPageCopy: createLandingPageCopy(input),
-    executionRoadmap: createRoadmap(input),
+    marketValidation: {
+      searchDemandAssumptions: ["Search for the words this audience uses to describe the problem."],
+      socialDemandAssumptions: ["Ask target users whether this problem is important enough to solve."],
+      competitorLandscape: "Alternatives and demand still need real-world validation.",
+      existingAlternatives: ["Unknown — ask users what they use today."],
+      userComplaints: ["Hypothesis: the audience has a problem worth testing."],
+      underservedAngle: "Start with one narrow problem and test it with real people.",
+      confidenceNotes: ["No external evidence has been collected yet."],
+    },
+    competitors: [],
+    mvpPlan: {
+      featureList: ["One manual or simple testable workflow"],
+      mustHaveFeatures: ["A clear problem statement", "One way to collect feedback"],
+      niceToHaveFeatures: [],
+      doNotBuildYet: ["Advanced automation", "Extra integrations", "Native mobile apps"],
+      technicalComplexity: "Low",
+      suggestedStack: ["Use the simplest tools you already know"],
+      sevenDayBuildPlan: ["Talk to 3 target users", "Make one simple test", "Record what happened"],
+      thirtyDayLaunchPlan: ["Run a small test", "Review the evidence", "Decide whether to continue"],
+    },
+    monetizationPlan: {
+      freeTier: ["A small manual or sample version"],
+      premiumTier: ["A paid pilot only after useful evidence"],
+      suggestedPrice: "Test willingness to pay before setting a price.",
+      tierFeatureMap: [],
+      upsellStrategy: "Do not add an upsell until users value the first outcome.",
+      whyUsersWouldPay: "Whether users will pay is not known yet.",
+    },
+    contentPlan: {
+      shortFormHooks: ["What is the hardest part of this problem today?"],
+      videoScripts: [],
+      tweetIdeas: ["Ask the audience how they solve this problem now."],
+      redditAngles: ["Request examples of the current workaround."],
+      seoArticleTitles: ["How does this audience solve this problem today?"],
+      shockValueAngle: "Do not claim a result without evidence.",
+      educationalAngle: "Share what the first customer conversations reveal.",
+      buildingInPublicAngle: "Document the small test and what changes next.",
+    },
+    landingPageCopy: {
+      heroHeadline: `Testing a simpler way for ${audienceLower}.`,
+      subheadline: "This is an early test. The problem and value are not validated yet.",
+      cta: "Share feedback",
+      benefitBullets: ["A focused starting point", "A way to share what is missing"],
+      socialProofPlaceholder: "No proof collected yet.",
+      faq: [],
+      pricingSectionCopy: "Pricing will be tested only after people find the first outcome useful.",
+    },
+    executionRoadmap: {
+      today: ["Write the problem in one sentence and list three people to ask."],
+      thisWeek: ["Talk to target users and record the exact words they use."],
+      thisMonth: ["Run one small test based on the strongest repeated signal."],
+      first100UsersPlan: ["Do not pursue scale before confirming one useful outcome."],
+      first1000RevenuePlan: ["Do not forecast revenue before testing willingness to pay."],
+      biggestRisks: ["The problem may not be important enough.", "The current workaround may be good enough."],
+      howToTestQuickly: ["Ask five target users how they handle this problem now."],
+    },
     generationMode: "mock",
   };
 }

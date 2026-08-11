@@ -156,7 +156,7 @@ export type OpportunityReport = {
   contentScriptBatch?: VideoScriptConcept[];
   landingPageCopy: LandingPageCopy;
   executionRoadmap: ExecutionRoadmap;
-  generationMode: "mock" | "openai";
+  generationMode: "mock" | "openai" | "cache";
   fallbackReason?: string;
 };
 

@@ -13,8 +13,8 @@ export type GenerateJsonOptions<T> = {
   logContext?: AiExecutionContext;
 };
 
-export async function generateJsonWithAI<T>({ feature, system, user, fallback, validate, logContext }: GenerateJsonOptions<T>): Promise<{ value: T; mode: "openai" | "mock"; fallbackReason?: string }> {
+export async function generateJsonWithAI<T>({ feature, system, user, fallback, validate, logContext }: GenerateJsonOptions<T>): Promise<{ value: T; mode: "openai" | "mock" | "cache"; fallbackReason?: string }> {
   if (!isAiTaskId(feature)) return { value: fallback, mode: "mock", fallbackReason: "This task is not registered for AI generation." };
   const result = await executeAiTask({ taskId: feature, system, user, fallback, validate, context: logContext });
-  return { value: result.value, mode: result.mode === "cache" ? "mock" : result.mode, fallbackReason: result.fallbackReason };
+  return { value: result.value, mode: result.mode, fallbackReason: result.fallbackReason };
 }

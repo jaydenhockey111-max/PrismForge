@@ -46,16 +46,11 @@ export async function generateOpportunityReport(input: UserOpportunityInput, con
       ],
     }),
     logContext: context,
-    validate: (value) => assertValidGeneratedReport(deepMerge(fallback, {
-      ...(value as Partial<OpportunityReport>),
-      generatedAt: new Date().toISOString(),
-      input,
-      generationMode: "openai" as const,
-    }), input),
+    validate: (value) => assertValidGeneratedReport(mergeAiReport(fallback, value, input), input),
   });
 
   const cleaned = normalizeReportTitle(result.value, input);
-  if (result.mode === "openai") return { ...cleaned, generationMode: "openai" };
+  if (result.mode === "openai" || result.mode === "cache") return { ...cleaned, generationMode: result.mode };
   return {
     ...cleaned,
     generationMode: "mock",
@@ -97,6 +92,51 @@ function deepMerge<T>(base: T, override: Partial<T>): T {
     else output[key] = value;
   }
   return output as T;
+}
+
+export function mergeAiReport(fallback: OpportunityReport, value: unknown, input: UserOpportunityInput): OpportunityReport {
+  const raw = isRecord(value) ? value : {};
+  const merged = deepMerge(fallback, {
+    ...raw,
+    generatedAt: new Date().toISOString(),
+    input,
+    generationMode: "openai" as const,
+  } as Partial<OpportunityReport>);
+  const rawSummary = isRecord(raw.summary) ? raw.summary : {};
+  const safeSummary = createSafeSummary(input, fallback.summary);
+
+  return {
+    ...merged,
+    summary: {
+      ...merged.summary,
+      oneSentenceIdea: synthesisText(rawSummary.oneSentenceIdea, safeSummary.oneSentenceIdea),
+      painPoint: synthesisText(rawSummary.painPoint, safeSummary.painPoint),
+      whyNow: synthesisText(rawSummary.whyNow, safeSummary.whyNow),
+      whyThisCouldMakeMoney: synthesisText(rawSummary.whyThisCouldMakeMoney, safeSummary.whyThisCouldMakeMoney),
+      businessModel: synthesisText(rawSummary.businessModel, safeSummary.businessModel),
+    },
+  };
+}
+
+function createSafeSummary(input: UserOpportunityInput, fallback: OpportunityReport["summary"]) {
+  return {
+    oneSentenceIdea: `${fallback.title} is a starting project for ${input.targetAudience}.`,
+    painPoint: `The problem for ${input.targetAudience} still needs validation.`,
+    whyNow: `Use ${input.timePerWeek} hours/week to run a small test.`,
+    whyThisCouldMakeMoney: "Whether people will pay is not known yet.",
+    businessModel: "Start with a small paid pilot before choosing a pricing model.",
+  };
+}
+
+function synthesisText(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  if (!cleaned || cleaned.length < 12 || /\ba\s+ai\b|\ba\s+ai tool\b|\{[^}]+\}/i.test(cleaned)) return fallback;
+  return cleaned;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeReportTitle(report: OpportunityReport, input: UserOpportunityInput): OpportunityReport {

@@ -80,6 +80,13 @@ describe("generated report quality", () => {
       expect(result.report.marketValidation.confidenceNotes.join(" ")).not.toMatch(/validated|revenue/i);
     }
   });
+
+  it("preserves cache as AI-backed generation", () => {
+    const result = validateGeneratedReport({ ...reportFixture(), generationMode: "cache" }, input);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.report.generationMode).toBe("cache");
+  });
 });
 
 function reportFixture(): OpportunityReport {

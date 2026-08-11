@@ -9,6 +9,7 @@ import { getEffectivePlan, getPlanLimits, isUnlimited } from "@/lib/billing/plan
 import { getFeatureUsagePolicy, planCanAccessFeature } from "@/lib/billing/featurePolicy";
 import type { Json } from "@/lib/database.types";
 import { assessFounderInputCoherence, canonicalInputKey } from "@/lib/founder-os/generationInput";
+import { createProjectCreationSuccessMessage } from "@/lib/founder-os/createProjectFeedback";
 import { hasLowQualityProjectOutput, sanitizeFounderInput } from "@/lib/founder-os/guidedIdeaRecovery";
 import { createMockOpportunityReport, generateOpportunityReport } from "@/lib/founder-os/reportGenerator";
 import { validateGeneratedReport } from "@/lib/founder-os/reportQuality";
@@ -119,7 +120,7 @@ export async function generateFounderProject(formData: FormData) {
   let report = await createReportWithReliableFallback({ input: sanitized, userId: profile.id, requestId, startedAt, plan });
   const reportValidation = validateGeneratedReport(report, sanitized);
   if (!reportValidation.ok) {
-    await logGenerationStage({ userId: profile.id, requestId, stage: "report_validation_failed_fallback_attempted", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback", errorCategory: reportValidation.category, metadata: { reason: reportValidation.reason } });
+    await logGenerationStage({ userId: profile.id, requestId, stage: "report_validation_failed_fallback_attempted", startedAt, source: generationLogSource(report.generationMode), errorCategory: reportValidation.category, metadata: { reason: reportValidation.reason } });
     await logBetaEvent({ userId: profile.id, eventName: "project_generation_fallback_used", source: "generate_action", metadata: { request_id: requestId, reason: reportValidation.reason, duration_ms: Date.now() - startedAt } });
     report = { ...createMockOpportunityReport(sanitized), fallbackReason: `Generated output was rejected: ${reportValidation.reason}`, generationMode: "mock" as const };
   } else {
@@ -154,13 +155,13 @@ export async function generateFounderProject(formData: FormData) {
   }
 
   if (hasLowQualityProjectOutput({ title: report.summary.title, targetAudience: report.summary.targetCustomer, painPoint: report.summary.painPoint })) {
-    await logGenerationStage({ userId: profile.id, requestId, stage: "quality_guard_failed", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback", errorCategory: "quality" });
+    await logGenerationStage({ userId: profile.id, requestId, stage: "quality_guard_failed", startedAt, source: generationLogSource(report.generationMode), errorCategory: "quality" });
     await logBetaEvent({ userId: profile.id, eventName: "generate_project_failed", source: "generate_action", metadata: { request_id: requestId, reason: "low_quality_output", generation_mode: report.generationMode, duration_ms: Date.now() - startedAt } });
     await logInputRecoveryEvent(profile.id, "project_generation_blocked_low_quality", { generation_mode: report.generationMode, recovered_fields: sanitized.recoveredFields });
     redirect(`/generate?error=${encodeURIComponent("PrismForge could not create a coherent project from those answers. Try adding one real interest, skill, or target audience — or leave the idea field blank for Guided Idea Mode.")}`);
   }
 
-  await logGenerationStage({ userId: profile.id, requestId, stage: "project_insert_started", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback" });
+  await logGenerationStage({ userId: profile.id, requestId, stage: "project_insert_started", startedAt, source: generationLogSource(report.generationMode) });
   await logBetaEvent({ userId: profile.id, eventName: "project_save_started", source: "generate_action", metadata: { request_id: requestId, generation_mode: report.generationMode, duration_ms: Date.now() - startedAt } });
 
   const { projectId, error: projectError } = await createFounderProjectRecord({
@@ -171,14 +172,17 @@ export async function generateFounderProject(formData: FormData) {
   });
 
   if (projectError || !projectId) {
-    await logGenerationStage({ userId: profile.id, requestId, stage: "project_insert_failed", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback", errorCategory: "save" });
+    await logGenerationStage({ userId: profile.id, requestId, stage: "project_insert_failed", startedAt, source: generationLogSource(report.generationMode), errorCategory: "save" });
     await logBetaEvent({ userId: profile.id, eventName: "project_save_failed", source: "generate_action", metadata: { request_id: requestId, reason: "database_save_failed", duration_ms: Date.now() - startedAt } });
     await logBetaEvent({ userId: profile.id, eventName: "project_generation_failed", source: "generate_action", metadata: { request_id: requestId, reason: "database_save_failed", duration_ms: Date.now() - startedAt } });
     await logBetaEvent({ userId: profile.id, eventName: "generate_project_failed", source: "generate_action", metadata: { request_id: requestId, reason: "database_save_failed", duration_ms: Date.now() - startedAt } });
     redirect(`/generate?error=${encodeURIComponent("Your project plan was created, but we could not save it. Please retry.")}`);
   }
 
-  await logGenerationStage({ userId: profile.id, projectId, requestId, stage: "project_insert_succeeded", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback" });
+  await logGenerationStage({ userId: profile.id, projectId, requestId, stage: "project_insert_succeeded", startedAt, source: generationLogSource(report.generationMode) });
+  if (report.generationMode === "mock") {
+    await logBetaEvent({ userId: profile.id, projectId, eventName: "project_creation_fallback_used", source: "generate_action", metadata: { request_id: requestId, generation_mode: report.generationMode, duration_ms: Date.now() - startedAt } });
+  }
   await logBetaEvent({ userId: profile.id, projectId, eventName: "project_save_completed", source: "generate_action", metadata: { request_id: requestId, project_id: projectId, duration_ms: Date.now() - startedAt } });
   await logBetaEvent({ userId: profile.id, projectId, eventName: "project_database_save_completed", source: "generate_action", metadata: { request_id: requestId, project_id: projectId, duration_ms: Date.now() - startedAt } });
   const { count: ownedProjectCount } = await supabase.from("opportunity_projects").select("*", { count: "exact", head: true }).eq("user_id", profile.id).is("deleted_at", null);
@@ -197,11 +201,11 @@ export async function generateFounderProject(formData: FormData) {
     requestId,
     stage: historyError ? "optional_history_insert_failed" : "optional_history_insert_succeeded",
     startedAt,
-    source: report.generationMode === "openai" ? "openai" : "fallback",
+    source: generationLogSource(report.generationMode),
     errorCategory: historyError ? "optional_insert" : undefined,
   });
 
-  let params = new URLSearchParams({ message: "Your project is ready. Start with your Next Move." });
+  let params = new URLSearchParams({ message: createProjectCreationSuccessMessage(report.generationMode === "mock") });
   try {
     const result = await trackUserAction({
       userId: profile.id,
@@ -230,7 +234,7 @@ export async function generateFounderProject(formData: FormData) {
   await logBetaEvent({ userId: profile.id, projectId, eventName: "project_generation_completed", source: "generate_action", metadata: { request_id: requestId, score: report.score.overall, generation_mode: report.generationMode, duration_ms: Date.now() - startedAt, project_id: projectId } });
   await logBetaEvent({ userId: profile.id, projectId, eventName: "generate_project_completed", source: "generate_action", metadata: { request_id: requestId, score: report.score.overall, business_type: sanitized.businessType, generation_mode: report.generationMode, duration_ms: Date.now() - startedAt, project_id: projectId } });
   await logBetaEvent({ userId: profile.id, projectId, eventName: "project_creation_completed", source: "generate_action", metadata: { request_id: requestId, score: report.score.overall, generation_mode: report.generationMode, duration_ms: Date.now() - startedAt, project_id: projectId } });
-  await logGenerationStage({ userId: profile.id, projectId, requestId, stage: "redirect_target_created", startedAt, source: report.generationMode === "openai" ? "openai" : "fallback" });
+  await logGenerationStage({ userId: profile.id, projectId, requestId, stage: "redirect_target_created", startedAt, source: generationLogSource(report.generationMode) });
   await logBetaEvent({ userId: profile.id, projectId, eventName: "project_redirect_started", source: "generate_action", metadata: { request_id: requestId, project_id: projectId, duration_ms: Date.now() - startedAt } });
 
   revalidatePath("/dashboard");
@@ -262,20 +266,20 @@ async function createReportWithReliableFallback({
     await logGenerationStage({
       userId,
       requestId,
-      stage: report.generationMode === "openai" ? "openai_succeeded" : "local_fallback_used",
+      stage: report.generationMode === "mock" ? "local_fallback_used" : report.generationMode === "cache" ? "ai_cache_reused" : "openai_succeeded",
       startedAt,
-      source: report.generationMode === "openai" ? "openai" : "fallback",
+      source: generationLogSource(report.generationMode),
       metadata: { fallback_reason: report.fallbackReason ?? null },
     });
     await logBetaEvent({
       userId,
-      eventName: report.generationMode === "openai" ? "openai_generation_completed" : "local_fallback_used",
+      eventName: report.generationMode === "mock" ? "local_fallback_used" : "openai_generation_completed",
       source: "generate_action",
       metadata: { request_id: requestId, fallback_reason: report.fallbackReason ?? null, duration_ms: Date.now() - startedAt },
     });
     await logBetaEvent({
       userId,
-      eventName: report.generationMode === "openai" ? "project_generation_ai_succeeded" : "project_generation_fallback_used",
+      eventName: report.generationMode === "mock" ? "project_generation_fallback_used" : "project_generation_ai_succeeded",
       source: "generate_action",
       metadata: { request_id: requestId, fallback_reason: report.fallbackReason ?? null, duration_ms: Date.now() - startedAt },
     });
@@ -292,6 +296,10 @@ async function createReportWithReliableFallback({
       generationMode: "mock" as const,
     };
   }
+}
+
+function generationLogSource(mode: OpportunityReport["generationMode"]) {
+  return mode === "mock" ? "fallback" : mode;
 }
 
 async function logInputRecoveryEvent(userId: string, eventName: string, metadata: Record<string, Json>) {
@@ -364,7 +372,7 @@ async function findReusableProjectForInput(
     const report = project.report_json as unknown as Partial<OpportunityReport> | null;
     if (!report?.input) continue;
     if (canonicalInputKey(report.input) === inputKey) {
-      return { id: project.id, generationMode: report.generationMode === "openai" ? "openai" : "mock" };
+      return { id: project.id, generationMode: report.generationMode ?? "mock" };
     }
   }
 

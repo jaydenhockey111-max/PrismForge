@@ -94,7 +94,7 @@ const reportSchema = z.object({
     biggestRisks: stringArray,
     howToTestQuickly: stringArray,
   }),
-  generationMode: z.enum(["mock", "openai"]).catch("mock"),
+  generationMode: z.enum(["mock", "openai", "cache"]).catch("mock"),
   fallbackReason: z.string().optional(),
 });
 
@@ -130,12 +130,15 @@ export function validateGeneratedReport(value: unknown, input: UserOpportunityIn
       painPoint: cleanText(report.summary.painPoint).slice(0, 800),
     },
     score: normalizeScore(report.score),
-    generationMode: report.generationMode === "openai" ? "openai" : "mock",
+    generationMode: report.generationMode,
   };
-  const valueValidation = improveReportValue(cleanGeneratedObject(normalizedBeforeTrust), input);
+  const valueValidation = improveReportValue({
+    ...cleanGeneratedObject(normalizedBeforeTrust),
+    generationMode: normalizedBeforeTrust.generationMode,
+  }, input);
   const languageBeforeTrust = valueValidation.report;
   const trustValidation = sanitizeOpportunityReportTrust(languageBeforeTrust);
-  const normalized = trustValidation.report;
+  const normalized = { ...trustValidation.report, generationMode: normalizedBeforeTrust.generationMode };
   const logicValidation = validateProjectLogic({ report: normalized, status: "idea" });
   const languageIssues = validateLanguage(JSON.stringify(normalizedBeforeTrust).slice(0, 10_000));
 
